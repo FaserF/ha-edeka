@@ -92,6 +92,17 @@ class EdekaAPIClient:
         )
         return []
 
+    def get_market_by_id(self, market_id: str) -> dict[str, Any] | None:
+        """Fetch details for a specific EDEKA market by ID."""
+        _LOGGER.debug("Fetching EDEKA market details for ID: %s", market_id)
+        url = "https://www.edeka.de/api/marketsearch/markets"
+        data = self._request("GET", url, params={"marketId": market_id})
+        if isinstance(data, dict):
+            markets = data.get("markets", [])
+            if markets:
+                return markets[0]
+        return None
+
     def get_offers(self, market_id: str) -> list[dict[str, Any]]:
         """Fetch offers for the given market ID."""
         _LOGGER.debug("Fetching offers for EDEKA market_id: %s", market_id)

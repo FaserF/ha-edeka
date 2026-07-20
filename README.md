@@ -126,6 +126,14 @@ Ensure all files pass strict type checking:
 mypy .
 ```
 
+## 🛒 Other Supermarket Integrations
+
+If you like this integration, you might also be interested in my other supermarket integrations for Home Assistant:
+
+- [REWE Offers](https://github.com/FaserF/ha-rewe)
+- [Lidl Offers](https://github.com/FaserF/ha-lidl)
+- [Aldi Offers](https://github.com/FaserF/ha-aldi)
+
 ## 💖 Credits & Acknowledgements
 
 This integration relies on reverse-engineering work and community research from the following projects:

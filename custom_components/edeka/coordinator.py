@@ -151,8 +151,9 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             )
             return self.data
 
-        # Restart-resistance: skip if last fetch was very recent
-        if not self._force_update and self._last_success is not None:
+        # Restart-resistance: skip if last fetch was very recent and we have market details
+        has_market_details = self.data and self.data.get("market_details")
+        if not self._force_update and self._last_success is not None and has_market_details:
             time_since = dt_util.now() - self._last_success
             effective_interval = self.update_interval or timedelta(
                 hours=DEFAULT_UPDATE_INTERVAL
@@ -403,22 +404,32 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             search_queries = unique_queries
 
             market_details = {}
-            for query in search_queries:
-                try:
-                    markets = client.market_search(query)
-                    for m in markets:
-                        if str(m.get("id")) == self.market_id:
-                            market_details = m
+            try:
+                market_details = client.get_market_by_id(self.market_id) or {}
+            except Exception as e:
+                _LOGGER.warning(
+                    "Could not fetch market details directly by ID %s: %s",
+                    self.market_id,
+                    e,
+                )
+
+            if not market_details:
+                for query in search_queries:
+                    try:
+                        markets = client.market_search(query)
+                        for m in markets:
+                            if str(m.get("id")) == self.market_id:
+                                market_details = m
+                                break
+                        if market_details:
                             break
-                    if market_details:
-                        break
-                except Exception as e:
-                    _LOGGER.warning(
-                        "Could not fetch market details for %s with query %s: %s",
-                        self.market_id,
-                        query,
-                        e,
-                    )
+                    except Exception as e:
+                        _LOGGER.warning(
+                            "Could not fetch market details for %s with query %s: %s",
+                            self.market_id,
+                            query,
+                            e,
+                        )
 
             data = {
                 "discounts": parsed_discounts,

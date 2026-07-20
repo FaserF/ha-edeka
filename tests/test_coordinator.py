@@ -48,6 +48,7 @@ async def test_coordinator_fetch_success(hass: HomeAssistant) -> None:
 
     mock_client = MagicMock()
     mock_client.get_offers.return_value = mock_offers
+    mock_client.get_market_by_id.return_value = mock_market
     mock_client.market_search.return_value = [mock_market]
     mock_client.cookies = {}
 
