@@ -13,6 +13,10 @@
         "data": {
           "market_id": "Select Market"
         }
+      },
+      "discovery_confirm": {
+        "title": "EDEKA market found nearby",
+        "description": "An EDEKA market was discovered near your Home Assistant location:\n\n**{name}**\n{street}, {city}\n\nWould you like to add it?"
       }
     },
     "abort": {

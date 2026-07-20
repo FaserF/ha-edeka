@@ -13,6 +13,10 @@
         "data": {
           "market_id": "Markt auswählen"
         }
+      },
+      "discovery_confirm": {
+        "title": "EDEKA-Markt in der Nähe gefunden",
+        "description": "Ein EDEKA-Markt wurde in der Nähe deines Home Assistant Standorts gefunden:\n\n**{name}**\n{street}, {city}\n\nMöchtest du ihn hinzufügen?"
       }
     },
     "abort": {

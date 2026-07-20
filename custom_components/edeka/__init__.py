@@ -3,15 +3,141 @@
 from __future__ import annotations
 
 import logging
+import math
+from typing import Any
 
 from homeassistant import config_entries, core
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from .const import CONF_MARKET_ID, DOMAIN, PLATFORMS
+from .const import CONF_MARKET_ID, DISCOVERY_RADIUS_KM, DOMAIN, PLATFORMS
 from .coordinator import EdekaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Return distance in km between two GPS coordinates."""
+    r = 6371.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    )
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+async def async_setup(hass: core.HomeAssistant, config: dict[str, Any]) -> bool:
+    """Set up the EDEKA integration (fires discovery task)."""
+    hass.async_create_task(_async_discover_markets(hass))
+    return True
+
+
+async def _async_discover_markets(hass: core.HomeAssistant) -> None:
+    """Search for nearby EDEKA markets and trigger integration discovery."""
+    ha_lat = hass.config.latitude
+    ha_lon = hass.config.longitude
+    location_name: str = hass.config.location_name or ""
+
+    if not ha_lat or not ha_lon:
+        _LOGGER.debug("EDEKA discovery: HA home location not set, skipping")
+        return
+
+    query = location_name.strip() if location_name.strip() else ""
+    if not query:
+        _LOGGER.debug("EDEKA discovery: no location_name configured, skipping")
+        return
+
+    _LOGGER.debug("EDEKA discovery: searching markets for '%s'", query)
+
+    from .api import EdekaAPIClient
+
+    try:
+        client = EdekaAPIClient()
+        markets: list[dict[str, Any]] = await hass.async_add_executor_job(
+            client.market_search, query
+        )
+    except Exception as exc:
+        _LOGGER.debug("EDEKA discovery: API error during search: %s", exc)
+        return
+
+    configured_ids = {
+        entry.data.get(CONF_MARKET_ID)
+        for entry in hass.config_entries.async_entries(DOMAIN)
+    }
+
+    # Collect ALL markets within radius (including already-configured ones)
+    # so we can determine the true geographic nearest before deciding.
+    candidates: list[tuple[float, dict[str, Any]]] = []
+    for market in markets:
+        market_id = str(market.get("id", "")).strip()
+        if not market_id:
+            continue
+
+        dist = DISCOVERY_RADIUS_KM  # default if no coords available
+        coords = market.get("coords") or market.get("coordinate") or {}
+        market_lat = coords.get("lat") or coords.get("latitude")
+        market_lon = coords.get("lng") or coords.get("longitude")
+        if market_lat is not None and market_lon is not None:
+            try:
+                dist = _haversine_km(
+                    ha_lat, ha_lon, float(market_lat), float(market_lon)
+                )
+            except (TypeError, ValueError):
+                pass  # keep default distance → included
+
+        if dist <= DISCOVERY_RADIUS_KM:
+            candidates.append((dist, market))
+
+    if not candidates:
+        _LOGGER.debug(
+            "EDEKA discovery: no markets found within %.0f km", DISCOVERY_RADIUS_KM
+        )
+        return
+
+    candidates.sort(key=lambda t: t[0])
+    nearest_dist, nearest = candidates[0]
+    nearest_market_id = str(nearest.get("id", "")).strip()
+
+    # If the geographically nearest market is already configured, stop entirely.
+    if nearest_market_id in configured_ids:
+        _LOGGER.debug(
+            "EDEKA discovery: nearest market %s is already configured, skipping discovery",
+            nearest_market_id,
+        )
+        return
+
+    market_id = str(nearest.get("id", "")).strip()
+    addr = nearest.get("contact", {}).get("address", {})
+    street = addr.get("street") or ""
+    city_obj = addr.get("city") or {}
+    city = city_obj.get("name") or ""
+    name = nearest.get("name") or "EDEKA Markt"
+    zip_code = city_obj.get("zipCode") or ""
+    url = nearest.get("url") or ""
+
+    _LOGGER.debug(
+        "EDEKA discovery: triggering flow for nearest market %s (%s, %.1f km)",
+        market_id,
+        name,
+        nearest_dist,
+    )
+    hass.async_create_task(
+        hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
+            data={
+                CONF_MARKET_ID: market_id,
+                "name": name,
+                "street": street,
+                "city": city,
+                "zip_code": zip_code,
+                "url": url,
+            },
+        )
+    )
 
 
 async def async_setup_entry(
