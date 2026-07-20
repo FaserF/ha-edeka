@@ -1,0 +1,15 @@
+{
+  "domain": "edeka",
+  "name": "EDEKA Offers",
+  "codeowners": [
+    "@FaserF"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/FaserF/ha-edeka",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/FaserF/ha-edeka/issues",
+  "requirements": [
+    "curl_cffi>=0.15.0"
+  ],
+  "version": "0.0.1"
+}

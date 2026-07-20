@@ -1,0 +1,45 @@
+{
+  "config": {
+    "flow_title": "EDEKA wöchentliche Angebote einrichten",
+    "step": {
+      "user": {
+        "description": "Gib deine EDEKA-Markt-ID direkt ein oder gib deine Stadt / Postleitzahl ein, um nach nahegelegenen EDEKA-Märkten zu suchen.",
+        "data": {
+          "search_or_id": "EDEKA-Markt-ID oder Suchanfrage"
+        }
+      },
+      "select_market": {
+        "description": "Wähle deinen EDEKA-Markt aus den Suchergebnissen unten aus.",
+        "data": {
+          "market_id": "Markt auswählen"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Dieser EDEKA-Markt ist bereits konfiguriert.",
+      "no_markets_found": "Keine EDEKA-Märkte gefunden, die deiner Suchanfrage entsprechen."
+    },
+    "error": {
+      "invalid_market_id": "Bitte gib eine gültige EDEKA-Markt-ID ein.",
+      "search_failed": "Abfrage der EDEKA-Markt-API fehlgeschlagen. Bitte gib deine ID manuell ein.",
+      "no_markets_found": "Keine EDEKA-Märkte gefunden, die deiner Suchanfrage entsprechen. Bitte versuche eine andere Suche oder gib die ID manuell ein.",
+      "unknown": "Ein unbekannter Fehler ist aufgetreten."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "EDEKA wöchentliche Angebote konfigurieren",
+        "data": {
+          "update_interval": "Aktualisierungsintervall (Stunden, mindestens 1, maximal 24)"
+        }
+      }
+    }
+  },
+  "issues": {
+    "connection_error": {
+      "title": "Fehler bei der Kommunikation mit der EDEKA-API",
+      "description": "Die Integration kann keine Angebote abrufen. Bitte überprüfe die Protokolle."
+    }
+  }
+}

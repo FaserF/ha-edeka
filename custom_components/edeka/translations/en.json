@@ -1,0 +1,45 @@
+{
+  "config": {
+    "flow_title": "Setup EDEKA weekly offers",
+    "step": {
+      "user": {
+        "description": "Enter your EDEKA Market ID directly, or type your city / postal code to search for nearby EDEKA markets.",
+        "data": {
+          "search_or_id": "EDEKA Market ID or Search Query"
+        }
+      },
+      "select_market": {
+        "description": "Select your EDEKA market from the search results below.",
+        "data": {
+          "market_id": "Select Market"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This EDEKA market is already configured.",
+      "no_markets_found": "No EDEKA markets found matching your query."
+    },
+    "error": {
+      "invalid_market_id": "Please enter a valid EDEKA market ID.",
+      "search_failed": "Failed to query the EDEKA market API. Please enter your ID manually.",
+      "no_markets_found": "No EDEKA markets found matching your query. Please try another search or enter ID manually.",
+      "unknown": "Unknown Error occurred."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure EDEKA weekly offers",
+        "data": {
+          "update_interval": "Update Interval (hours, min 1, max 24)"
+        }
+      }
+    }
+  },
+  "issues": {
+    "connection_error": {
+      "title": "Error communicating with EDEKA API",
+      "description": "The integration is unable to fetch offers. Please check the logs."
+    }
+  }
+}

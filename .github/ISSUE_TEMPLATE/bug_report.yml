@@ -1,0 +1,55 @@
+name: Bug Report
+description: Report a bug with the EDEKA Discounts Home Assistant integration
+title: '[Bug]: '
+labels: ['bug', 'triage']
+assignees:
+  - FaserF
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Before submitting
+        - 🔍 Search [existing issues](https://github.com/FaserF/ha-edeka/issues) to avoid duplicates
+        - 📖 Check the README.md
+
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration Version
+      description: Which version of ha-edeka are you running? (HACS or integration page)
+      placeholder: e.g. v2026.7.0
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant Version
+      placeholder: e.g. 2026.7.2
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Enable debug logging and paste relevant log lines here.
+        Add to `configuration.yaml`:
+        ```yaml
+        logger:
+          default: warning
+          logs:
+            custom_components.edeka: debug
+        ```
+      render: shell
+    validations:
+      required: true
