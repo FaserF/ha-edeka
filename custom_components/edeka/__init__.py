@@ -7,6 +7,7 @@ import math
 from typing import Any
 
 from homeassistant import config_entries, core
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -30,8 +31,24 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 async def async_setup(hass: core.HomeAssistant, config: dict[str, Any]) -> bool:
-    """Set up the EDEKA integration (fires discovery task)."""
-    hass.async_create_task(_async_discover_markets(hass))
+    """Set up the EDEKA integration.
+
+    When 'edeka:' is listed in configuration.yaml (zero-entry bootstrap),
+    this is the only hook HA calls. Register the discovery listener here
+    too, using the same session guard used in async_setup_entry.
+    """
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    if not domain_data.get("_discovery_scheduled"):
+        domain_data["_discovery_scheduled"] = True
+
+        async def _on_ha_started(event: core.Event) -> None:  # noqa: RUF100
+            await _async_discover_markets(hass)
+
+        if hass.is_running:
+            hass.async_create_task(_async_discover_markets(hass))
+        else:
+            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _on_ha_started)
+
     return True
 
 
@@ -172,6 +189,23 @@ async def async_setup_entry(
     entry.async_on_unload(entry.add_update_listener(_async_update_options))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Schedule location-based discovery once per HA session.
+    # Using EVENT_HOMEASSISTANT_STARTED ensures hass.config (lat/lon/country)
+    # is fully populated and all integrations are loaded before we query the API.
+    domain_data = hass.data[DOMAIN]
+    if not domain_data.get("_discovery_scheduled"):
+        domain_data["_discovery_scheduled"] = True
+
+        async def _on_ha_started(event: core.Event) -> None:  # noqa: RUF100
+            await _async_discover_markets(hass)
+
+        if hass.is_running:
+            # Integration was reloaded while HA was already up
+            hass.async_create_task(_async_discover_markets(hass))
+        else:
+            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _on_ha_started)
+
     _LOGGER.debug("Finished setting up EDEKA Offers entry: %s", entry.entry_id)
     return True
 
