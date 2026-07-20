@@ -1,6 +1,6 @@
 <div align="center">
   <h1>EDEKA Offers (for Home Assistant) 🛒</h1>
-  <p><strong>A secure, robust Home Assistant integration that fetches weekly offers, discounts, and EDEKA Bonus details for your local EDEKA market directly from the official EDEKA Web API.</strong></p>
+  <p><strong>A secure, robust Home Assistant integration that fetches weekly offers and market status for your local EDEKA market directly from the official EDEKA Web API.</strong></p>
 
   [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://hacs.xyz)
   [![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-edeka/latest/edeka.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-edeka/releases)
@@ -18,39 +18,48 @@
 | [🧑‍💻 Development](#-development) | [💖 Credits](#-credits--acknowledgements) | [📄 License](#-license) | |
 
 ### Why use this integration?
-Instead of scraping public HTML pages (which constantly break) or using generic web frames, this integration connects directly to the official EDEKA Mobile GraphQL endpoints. Using curl_cffi for client impersonation and standard web endpoints, it fetches structured, high-fidelity offers data in real-time.
+Instead of scraping public HTML pages (which constantly break) or using generic web frames, this integration connects directly to the official EDEKA Web API. Using curl_cffi for browser impersonation, it fetches structured, high-fidelity offer and market data in real-time.
 
-It groups all sensors under a single market device and implements advanced lock-serialisation, random jitter delays, and backoffs to keep your setup secure and prevent bans.
+It groups all sensors under a single market device and implements advanced lock-serialisation, random jitter delays, and backoffs to keep your setup stable and prevent rate-limiting.
 
 ## ✨ Features
 
-- **🛒 Detailed Offers Sensors**:
-  - **Offers**: Current week's discounted items count, with attributes detailing titles, base prices, active discount prices, categories, and direct links to product images.
-  - **Offers Preview**: Next week's upcoming deals.
-- **⭐ EDEKA Bonus Point Tracking**:
-  - **EDEKA Bonus**: Displays the count of items in the current week that yield loyalty points/cashback. Attributes list detailed bonus values and types (e.g. points/cents).
-  - **EDEKA Bonus Preview**: Upcoming deals next week that will yield bonus points.
+- **🛒 Offers Sensor**:
+  - Reports the **number of current weekly discounted items** as its state.
+  - Attributes include: titles, base prices, active discount prices, categories, and direct links to product images.
+
+- **🏪 Market Status Sensor** *(disabled by default)*:
+  - Reports **Open / Closed** based on real-time business hours from the market's profile.
+  - Attributes include: address, ZIP code, city, phone number, GPS coordinates, opening hours for all weekdays, and available in-store services (e.g. Payback, EDEKA App Coupons).
+  - Works with all market types including **EDEKA Express**.
 
 > [!NOTE]
-> **Offers Preview** and **EDEKA Bonus Preview** show `0` items during the week (Sunday through Friday) and only populate starting on **Saturdays**, because EDEKA publishes next week's offers and bonus discounts only on Saturdays.
+> The **Market Status Sensor** is disabled by default. Enable it in **Settings › Devices & Services › EDEKA › Entities** if you want to use it.
+
+- **🔍 Location-Based Auto-Discovery**:
+  - On startup, the integration automatically searches for nearby EDEKA markets based on your Home Assistant home location (ZIP code / city name).
+  - If a market is found within the configured radius and not yet set up, a **discovery notification** will appear in the UI for easy one-click setup.
 
 - **🛡️ Rate-Limiting & Anti-Ban Protections**:
-  - **First-Fetch Optimisation**: Skips jitter sleep on initial setup so first refresh completes instantly.
+  - **First-Fetch Optimisation**: Skips jitter sleep on initial setup so the first refresh completes instantly.
   - **Lock Queueing**: A domain-wide lock ensures concurrent updates (e.g., after a reboot) run sequentially.
   - **Random Jitter**: Introduces a 5–30 second delay between requests.
-  - **Restart-Resistance**: Saves parsed data to HA storage cache to survive restarts without hitting the API.
+  - **Restart-Resistance**: Saves parsed data to HA storage cache to survive restarts without hitting the API. Re-fetches if market details are missing.
   - **Exponential Backoff**: Backs off for up to 24 hours on 403 or 429 errors.
+
 - **⚙️ Device-Based Grouping**:
   - All sensors and button entities are automatically grouped under a main EDEKA Market device.
-  - **Market Visit Button**: The device registry provides a dynamic configuration URL that takes you straight to your specific market's offers page (e.g., `/angebote/zorneding/440421/...`).
-- **🎛️ Manual Force Update**:
-  - A **Force Update** button entity allows manually triggering an API update on demand (disabled by default to avoid accidental triggers).
+  - **Market Visit Button**: The device registry provides a dynamic configuration URL that takes you straight to your specific market's offers page.
+
+- **🎛️ Manual Force Update** *(disabled by default)*:
+  - A **Force Update** button entity allows manually triggering an API update on demand.
+
 - **🔍 Diagnostic Downloads**:
-  - Full support for Home Assistant UI Diagnostics. Download complete configurations with API keys, cert paths, and session tokens automatically redacted.
+  - Full support for Home Assistant UI Diagnostics with sensitive data automatically redacted.
 
 ## ❤️ Support This Project
 
-> I maintain this integration in my **free time alongside my regular job** — debugging, building features, and keeping certificates updated.
+> I maintain this integration in my **free time alongside my regular job** — debugging, building features, and keeping the API integration updated.
 >
 > **This project is and will always remain 100% free.**
 >
@@ -85,19 +94,23 @@ This integration is fully compatible with [HACS](https://hacs.xyz/).
 
 ## ⚙️ Configuration
 
-1. Navigate to **Settings > Devices & Services** in Home Assistant.
+1. Navigate to **Settings › Devices & Services** in Home Assistant.
 2. Click **Add Integration** and search for **EDEKA Offers**.
 
 [![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=edeka)
-3. Enter your ZIP code or city name to search for nearby EDEKA markets.
+
+3. Enter your ZIP code, city name, or a direct **Market ID** to search for your local EDEKA market.
 4. Select your specific market from the dropdown list.
 5. Submit to create the device and entities.
+
+> [!TIP]
+> You can also enter the numeric **Market ID** directly (e.g. `8001860`) if you know it, and the integration will create the entry immediately without a search step.
 
 ## 🛠️ Options Flow
 
 You can customise the poll interval of the integration at any time:
 
-1. Go to **Settings > Devices & Services**.
+1. Go to **Settings › Devices & Services**.
 2. Find **EDEKA Offers** and click **Configure**.
 3. Set the **Update Interval** in hours (default is 24 hours, minimum is 1 hour).
 
@@ -126,6 +139,12 @@ Ensure all files pass strict type checking:
 mypy .
 ```
 
+### Testing
+Run the automated test suite:
+```bash
+pytest
+```
+
 ## 🛒 Other Supermarket Integrations
 
 If you like this integration, you might also be interested in my other supermarket integrations for Home Assistant:
@@ -139,8 +158,8 @@ If you like this integration, you might also be interested in my other supermark
 This integration relies on reverse-engineering work and community research from the following projects:
 
 - **[ByteSizedMarius/edekarse-engineering](https://github.com/ByteSizedMarius/edekarse-engineering)**: For mapping out the EDEKA mobile API and providing Go/Python wrappers.
-- **[foo-git/edeka-discounts](https://github.com/foo-git/edeka-discounts)**: For GraphQL endpoint structures and headers.
-- **[torbenpfohl/edeka-discounts](https://github.com/torbenpfohl/edeka-discounts)**: For certificate extraction documentation.
+- **[foo-git/edeka-discounts](https://github.com/foo-git/edeka-discounts)**: For endpoint structures and headers.
+- **[torbenpfohl/edeka-discounts](https://github.com/torbenpfohl/edeka-discounts)**: For API research and documentation.
 
 ## 📄 License
 
