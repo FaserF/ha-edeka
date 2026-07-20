@@ -75,7 +75,7 @@ async def _async_discover_markets(hass: core.HomeAssistant) -> None:
         )
         return
 
-    _LOGGER.debug("EDEKA discovery: searching markets with query '%s'", query)
+    _LOGGER.debug("EDEKA discovery: starting market search")
 
     from .api import EdekaAPIClient
 
