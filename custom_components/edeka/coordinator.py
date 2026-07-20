@@ -153,7 +153,11 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Restart-resistance: skip if last fetch was very recent and we have market details
         has_market_details = self.data and self.data.get("market_details")
-        if not self._force_update and self._last_success is not None and has_market_details:
+        if (
+            not self._force_update
+            and self._last_success is not None
+            and has_market_details
+        ):
             time_since = dt_util.now() - self._last_success
             effective_interval = self.update_interval or timedelta(
                 hours=DEFAULT_UPDATE_INTERVAL
