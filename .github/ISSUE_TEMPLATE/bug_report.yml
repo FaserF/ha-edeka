@@ -17,7 +17,7 @@ body:
     attributes:
       label: Integration Version
       description: Which version of ha-edeka are you running? (HACS or integration page)
-      placeholder: e.g. v2026.7.0
+      placeholder: e.g. v1.0.0
     validations:
       required: true
 
