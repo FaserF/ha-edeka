@@ -148,7 +148,7 @@ class EdekaMarketStatusSensor(
 
         import datetime
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc)
         weekday = now.strftime("%A").lower()  # e.g. 'monday'
         day_hours = business_hours.get(weekday)
         if not day_hours or not day_hours.get("open"):
@@ -158,13 +158,21 @@ class EdekaMarketStatusSensor(
             from_str = day_hours.get("from")
             to_str = day_hours.get("to")
             if from_str and to_str:
-                from_time = datetime.datetime.strptime(from_str, "%H:%M").time()
-                to_time = datetime.datetime.strptime(to_str, "%H:%M").time()
+                from_time = (
+                    datetime.datetime.strptime(from_str, "%H:%M")
+                    .replace(tzinfo=datetime.timezone.utc)
+                    .time()
+                )
+                to_time = (
+                    datetime.datetime.strptime(to_str, "%H:%M")
+                    .replace(tzinfo=datetime.timezone.utc)
+                    .time()
+                )
                 current_time = now.time()
                 if from_time <= current_time <= to_time:
                     return "Open"
-        except Exception:
-            pass
+        except Exception as e:
+            _ = e
         return "Closed"
 
     @property

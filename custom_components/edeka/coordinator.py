@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from homeassistant import config_entries
@@ -288,23 +288,25 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
             # Raise a HA Repair issue if we haven't succeeded in 24 h
-            if self._last_success and (dt_util.now() - self._last_success) > timedelta(
-                hours=24
+            # Raise a HA Repair issue if we haven't succeeded in 24 h
+            if (
+                self._last_success
+                and (dt_util.now() - self._last_success) > timedelta(hours=24)
+                and not self._issue_created
             ):
-                if not self._issue_created:
-                    _LOGGER.warning(
-                        "EDEKA market %s: creating connection repair issue as no updates succeeded in 24 hours",
-                        self.market_id,
-                    )
-                    ir.async_create_issue(
-                        self.hass,
-                        DOMAIN,
-                        ISSUE_ID_CONNECTION,
-                        is_fixable=False,
-                        severity=ir.IssueSeverity.WARNING,
-                        translation_key="connection_error",
-                    )
-                    self._issue_created = True
+                _LOGGER.warning(
+                    "EDEKA market %s: creating connection repair issue as no updates succeeded in 24 hours",
+                    self.market_id,
+                )
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    ISSUE_ID_CONNECTION,
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="connection_error",
+                )
+                self._issue_created = True
 
             # Exponential backoff on rate-limit / blocked responses
             status = getattr(err, "status", None)
@@ -351,10 +353,10 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
                 if offer.get("gueltig_bis"):
                     try:
                         valid_date_str = datetime.fromtimestamp(
-                            offer["gueltig_bis"] / 1000.0
+                            offer["gueltig_bis"] / 1000.0, tz=timezone.utc
                         ).isoformat()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        _ = e
 
                 parsed_discounts.append(
                     {

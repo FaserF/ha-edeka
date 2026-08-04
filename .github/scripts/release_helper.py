@@ -35,8 +35,8 @@ def main():
     for path in ["custom_components/edeka/manifest.json", "pyproject.toml"]:
         try:
             run_cmd(["git", "checkout", "--", path])
-        except Exception:
-            pass
+        except Exception as e:
+            _ = e
 
     print(f"Calculated Version: {version}")
     tag = f"v{version}"
@@ -57,7 +57,8 @@ def main():
         raw_tags = run_cmd(
             ["git", "tag", "-l", "[0-9]*", "v[0-9]*", "--sort=-v:refname"]
         ).splitlines()
-    except Exception:
+    except Exception as e:
+        _ = e
         raw_tags = []
 
     semver_tags = []
@@ -95,7 +96,8 @@ def main():
     diff_range = f"{changelog_from}..HEAD" if changelog_from else "HEAD"
     try:
         total_commit_count = int(run_cmd(["git", "rev-list", "--count", diff_range]))
-    except Exception:
+    except Exception as e:
+        _ = e
         total_commit_count = 0
 
     # 4. Generate Changelog
@@ -135,8 +137,8 @@ def main():
         if changelog_from:
             diff_cmd.append(changelog_from)
         changed_files = run_cmd(diff_cmd).splitlines()
-    except Exception:
-        pass
+    except Exception as e:
+        _ = e
 
     changed_files = [f.strip() for f in changed_files if f.strip()]
     total_files = len(changed_files)
@@ -153,7 +155,7 @@ def main():
             integration_count += 1
         elif f.startswith("tests/"):
             test_count += 1
-        elif f.startswith(".github/") or f.startswith("scripts/"):
+        elif f.startswith((".github/", "scripts/")):
             ci_count += 1
         elif f.startswith("docs/") or f.endswith(".md"):
             docs_count += 1
@@ -173,8 +175,8 @@ def main():
                 re.MULTILINE,
             )
         )
-    except Exception:
-        pass
+    except Exception as e:
+        _ = e
 
     # Determine risk severity
     severity = "Low"
