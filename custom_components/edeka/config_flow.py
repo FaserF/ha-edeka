@@ -9,6 +9,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
+from .api import EdekaAPIClient, EdekaAPIError
 from .const import (
     CONF_MARKET_ID,
     CONF_UPDATE_INTERVAL,
@@ -17,12 +18,11 @@ from .const import (
     MAX_UPDATE_INTERVAL,
     MIN_UPDATE_INTERVAL,
 )
-from .api import EdekaAPIClient
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Handle a config flow for EDEKA Offers."""
 
     VERSION = 1
@@ -107,7 +107,7 @@ class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._search_results = results
                     return await self.async_step_select_market()
 
-            except Exception as exc:
+            except (EdekaAPIError, TimeoutError, OSError) as exc:
                 _LOGGER.error("EDEKA market search error: %s", exc)
                 errors["base"] = "search_failed"
 

@@ -1,8 +1,10 @@
 """Test the EDEKA Offers config flow."""
 
 from unittest.mock import MagicMock, patch
+
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+
 from custom_components.edeka.const import DOMAIN
 
 

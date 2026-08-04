@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Literal
+
 from curl_cffi import requests
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class EdekaAPIError(Exception):
+    """Exception raised when EDEKA API request fails."""
 
 
 class EdekaAPIClient:

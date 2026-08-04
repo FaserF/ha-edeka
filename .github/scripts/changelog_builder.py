@@ -8,8 +8,7 @@ def get_commits(tag=None):
     try:
         out = subprocess.check_output(cmd, text=True).strip()
         return out.split("\n") if out else []
-    except Exception as e:
-        _ = e
+    except (subprocess.SubprocessError, OSError):
         return []
 
 

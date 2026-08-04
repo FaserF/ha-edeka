@@ -35,8 +35,8 @@ def main():
     for path in ["custom_components/edeka/manifest.json", "pyproject.toml"]:
         try:
             run_cmd(["git", "checkout", "--", path])
-        except Exception as e:
-            _ = e
+        except (subprocess.SubprocessError, OSError):
+            pass
 
     print(f"Calculated Version: {version}")
     tag = f"v{version}"
@@ -57,8 +57,7 @@ def main():
         raw_tags = run_cmd(
             ["git", "tag", "-l", "[0-9]*", "v[0-9]*", "--sort=-v:refname"]
         ).splitlines()
-    except Exception as e:
-        _ = e
+    except (subprocess.SubprocessError, OSError):
         raw_tags = []
 
     semver_tags = []
@@ -96,8 +95,7 @@ def main():
     diff_range = f"{changelog_from}..HEAD" if changelog_from else "HEAD"
     try:
         total_commit_count = int(run_cmd(["git", "rev-list", "--count", diff_range]))
-    except Exception as e:
-        _ = e
+    except (subprocess.SubprocessError, OSError, ValueError):
         total_commit_count = 0
 
     # 4. Generate Changelog
@@ -119,7 +117,7 @@ def main():
             changelog_md = run_cmd(cl_args)
             if not changelog_md.strip():
                 changelog_md = "_No categorised changes detected._"
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError) as e:
             print(f"Error calling changelog generator: {e}")
 
     # 5. Channel decoration
@@ -137,8 +135,8 @@ def main():
         if changelog_from:
             diff_cmd.append(changelog_from)
         changed_files = run_cmd(diff_cmd).splitlines()
-    except Exception as e:
-        _ = e
+    except (subprocess.SubprocessError, OSError):
+        pass
 
     changed_files = [f.strip() for f in changed_files if f.strip()]
     total_files = len(changed_files)
@@ -175,8 +173,8 @@ def main():
                 re.MULTILINE,
             )
         )
-    except Exception as e:
-        _ = e
+    except (subprocess.SubprocessError, OSError):
+        pass
 
     # Determine risk severity
     severity = "Low"

@@ -149,9 +149,7 @@ def main():
                 .decode("utf-8")
                 .strip()
             )
-            )
-        except Exception as e:
-            _ = e
+        except (subprocess.SubprocessError, OSError, ValueError):
             changelog_md = (
                 "_Changelog could not be generated automatically. See commit history._"
             )
@@ -255,9 +253,7 @@ def main():
         f"> **Affected areas:** {impact_str}\n"
     )
 
-    released_at = (
-        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M") + " UTC"
-    )
+    released_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M") + " UTC"
     body_parts = [
         f"# {friendly_name} {version}  {channel_badge}",
         "",

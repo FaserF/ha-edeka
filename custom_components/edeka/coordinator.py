@@ -18,10 +18,12 @@ from typing import Any
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir, storage
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers import storage
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
+from .api import EdekaAPIClient, EdekaAPIError
 from .const import (
     ATTR_BASE_PRICE,
     ATTR_CATEGORY,
@@ -36,7 +38,6 @@ from .const import (
     ISSUE_ID_CONNECTION,
     MIN_UPDATE_INTERVAL,
 )
-from .api import EdekaAPIClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -355,8 +356,8 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
                         valid_date_str = datetime.fromtimestamp(
                             offer["gueltig_bis"] / 1000.0, tz=timezone.utc
                         ).isoformat()
-                    except Exception as e:
-                        _ = e
+                    except (ValueError, TypeError, OverflowError, OSError):
+                        pass
 
                 parsed_discounts.append(
                     {
@@ -412,7 +413,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             market_details = {}
             try:
                 market_details = client.get_market_by_id(self.market_id) or {}
-            except Exception as e:
+            except (EdekaAPIError, TimeoutError, OSError) as e:
                 _LOGGER.warning(
                     "Could not fetch market details directly by ID %s: %s",
                     self.market_id,
@@ -429,7 +430,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
                                 break
                         if market_details:
                             break
-                    except Exception as e:
+                    except (EdekaAPIError, TimeoutError, OSError) as e:
                         _LOGGER.warning(
                             "Could not fetch market details for %s with query %s: %s",
                             self.market_id,

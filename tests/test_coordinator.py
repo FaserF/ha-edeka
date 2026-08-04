@@ -1,12 +1,14 @@
 """Test the EDEKA Offers coordinator."""
 
 from unittest.mock import MagicMock, patch
+
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.edeka.const import CONF_MARKET_ID, DOMAIN
 from custom_components.edeka.coordinator import EdekaDataUpdateCoordinator
-from custom_components.edeka.const import DOMAIN, CONF_MARKET_ID
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
@@ -87,6 +89,6 @@ async def test_coordinator_fetch_error(hass: HomeAssistant) -> None:
             return_value=mock_client,
         ),
         patch("asyncio.sleep"),
+        pytest.raises(UpdateFailed),
     ):
-        with pytest.raises(UpdateFailed):
-            await coordinator._async_update_data()
+        await coordinator._async_update_data()

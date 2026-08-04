@@ -12,6 +12,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from .api import EdekaAPIError
 from .const import CONF_MARKET_ID, DISCOVERY_RADIUS_KM, DOMAIN, PLATFORMS
 from .coordinator import EdekaDataUpdateCoordinator
 
@@ -84,7 +85,7 @@ async def _async_discover_markets(hass: core.HomeAssistant) -> None:
         markets: list[dict[str, Any]] = await hass.async_add_executor_job(
             client.market_search, query
         )
-    except Exception as exc:
+    except (EdekaAPIError, TimeoutError, OSError) as exc:
         _LOGGER.debug("EDEKA discovery: API error during search: %s", exc)
         return
 
