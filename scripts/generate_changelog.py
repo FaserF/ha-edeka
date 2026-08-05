@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Generates a structured, deduplicated, user-friendly changelog from git commit history."""
 
 import argparse
@@ -418,8 +419,7 @@ def main():
     else:
         out.append(f"*Changelog generated from `{range_str}`.*")
 
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8")
     print("\n".join(out))
 
 
