@@ -48,6 +48,16 @@
           "update_interval": "Aktualisierungsintervall (Stunden, mindestens 1, maximal 24)",
           "card_number": "EDEKA / PAYBACK Kartennummer",
           "user_token": "EDEKA Konto Session-Token (Optional)",
+          "auto_activate_coupons": "Coupons automatisch im Hintergrund aktivieren",
+          "action": "Aktion auswählen"
+        }
+      },
+      "login": {
+        "title": "EDEKA Kundenkonto & PAYBACK Einrichtung",
+        "description": "### 💳 EDEKA / PAYBACK Kundenkonto\n\n- **Kartennummer / Barcode**: Gib deine EDEKA oder PAYBACK Kartennummer ein, um einen scannbaren QR-Code für die Kasse zu erstellen.\n- **Konto Session-Token**: Gib deinen `KEYCLOAK_IDENTITY` Session-Cookie-Wert (beginnt mit `ey...`) von https://login.edeka ein (F12 > Anwendung > Cookies).\n\n📖 Eine genaue Anleitung findest du in der EDEKA Dokumentation auf GitHub.",
+        "data": {
+          "card_number": "EDEKA / PAYBACK Kartennummer",
+          "user_token": "EDEKA Session Token (KEYCLOAK_IDENTITY Cookie-Wert)",
           "auto_activate_coupons": "Coupons automatisch im Hintergrund aktivieren"
         }
       }

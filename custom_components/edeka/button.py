@@ -26,7 +26,7 @@ async def async_setup_entry(
     _LOGGER.debug("Setting up EDEKA Offers button for market %s", coordinator.market_id)
     async_add_entities([EdekaForceUpdateButton(coordinator)], update_before_add=False)
 
-    if coordinator.user_token:
+    if coordinator.user_token and coordinator.user_token.strip():
         created_buttons = hass.data[DOMAIN].setdefault(
             "_created_account_buttons", set()
         )

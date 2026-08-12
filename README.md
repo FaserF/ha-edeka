@@ -32,6 +32,10 @@ It groups all sensors under a single market device and implements advanced lock-
 - **📱 Dedicated EDEKA Account Device**:
   - Grouped under a dedicated **EDEKA Account (DE)** device with direct link to your PAYBACK web portal.
 
+> [!WARNING]
+> **eBons (receipts) and Coupons are currently NOT supported.**
+> EDEKA's personal data endpoints require an OAuth2 access token issued exclusively by the official EDEKA iOS/Android App (via Keycloak). The `KEYCLOAK_IDENTITY` web session cookie does **not** grant access to these endpoints. Until a compatible token exchange is discovered, those sensors will always show `0 items` / `Keine Kassenbons`.
+
 - **🏪 Market Status Sensor** *(disabled by default)*:
   - Reports **Open / Closed** based on real-time business hours from the market's profile.
   - Attributes include: address, ZIP code, city, phone number, GPS coordinates, opening hours for all weekdays, and available in-store services (e.g. Payback, EDEKA App Coupons).
@@ -110,16 +114,63 @@ This integration is fully compatible with [HACS](https://hacs.xyz/).
 > [!TIP]
 > You can also enter the numeric **Market ID** directly (e.g. `8001860`) if you know it, and the integration will create the entry immediately without a search step.
 
+## 🔐 EDEKA / PAYBACK Login *(optional)*
+
+Connecting your EDEKA account currently enables **one** additional feature:
+
+- **📸 EDEKA / PAYBACK Loyalty Card QR Code**: Displays a live, scannable QR Code entity on your Home Assistant dashboard for scanning at the store checkout.
+
+> [!WARNING]
+> **Current Limitations — eBons & Coupons**
+>
+> EDEKA's personal data endpoints are protected by native-app authentication:
+>
+> - **eBons (receipts)** and **Coupons** require a proprietary, user-specific OAuth2 access token issued only by the official EDEKA iOS/Android App via Keycloak — it is **not** the `KEYCLOAK_IDENTITY` web session cookie.
+> - The `KEYCLOAK_IDENTITY` cookie authenticates a *web browser session*, not a native app user session with the required `cheers-app.edeka.de` scope.
+> - Until a compatible token exchange endpoint is discovered, the `Activated Coupons`, `Available Coupons`, and `Last Receipt` sensors will always show `0 items` / `Keine Kassenbons`.
+
+Without account credentials, the integration operates in public mode and fetches weekly offers and market status.
+
+---
+
+### Option 1: PAYBACK / EDEKA Barcode Only *(simplest — 10 seconds)*
+
+If you only want the **Checkout QR Code**:
+1. Open the official **EDEKA App** or **PAYBACK App**, or check your physical **PAYBACK / EDEKA Card**.
+2. Copy the **barcode number** (printed under the barcode or in the app).
+3. In Home Assistant, go to **Settings > Devices & Services > EDEKA Offers > Options**.
+4. Select **Configure EDEKA / PAYBACK Account**.
+5. Paste your card barcode number into **EDEKA / PAYBACK Card Barcode Number**.
+6. Submit. A new **Loyalty Card QR Code (`image`)** entity appears under the **EDEKA Account (DE)** device.
+
+---
+
+### Option 2: Session Token *(currently no additional benefit)*
+
+A Session Token field exists in the integration for future use. At this time it does **not** unlock eBons or Coupons (see limitation above). You can skip this step.
+
+<details>
+<summary>How to extract the <code>KEYCLOAK_IDENTITY</code> cookie anyway (for future use / debugging)</summary>
+
+1. Open [https://login.edeka/app](https://login.edeka/app) in your browser and log in.
+2. Press **F12** → **Application** tab (Chrome/Edge) or **Storage** tab (Firefox).
+3. Under **Cookies** → `https://login.edeka`, find **`KEYCLOAK_IDENTITY`**.
+4. Copy its full value (`eyJ...`) and paste it as Session Token in Home Assistant.
+
+</details>
+
+---
+
 ## 🛠️ Options Flow & Account Features
 
-You can easily configure the integration in Home Assistant without any IT knowledge:
+You can easily configure or update the integration at any time:
 
-1. Go to **Settings > Devices & Services**.
-2. Find **EDEKA Offers** and click **Configure**.
-3. **Update Interval**: Set how often offers refresh in hours (default: 24 hours).
-4. **EDEKA / PAYBACK Card Barcode Number** *(Optional)*: Enter your PAYBACK / EDEKA card barcode number to display a ready-to-scan QR Code on your dashboard or phone for checkouts.
-5. **EDEKA Account Session Token** *(Optional)*: Enter your EDEKA account session token to enable personal **eBons (Kassenbons)**, **Available Coupons**, and **Activated Coupons**.
-6. **Auto-Activate Coupons**: Enable this checkbox to automatically activate new coupons in the background as soon as they become available.
+1. Go to **Settings > Devices & Services > EDEKA Offers**.
+2. Click **Configure** (Options).
+3. Choose an action:
+   - **⚙️ Save settings**: Update update interval (1–24 hours).
+   - **💳 Configure EDEKA / PAYBACK Account**: Add or update your Loyalty Card number, Session Token, or Auto-Activation preference.
+   - **🚪 Log out / Remove Account Data**: Clears account credentials and removes the Account Device.
 
 ## 🃏 Lovelace Cards
 

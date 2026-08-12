@@ -450,6 +450,8 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             data = {
                 "discounts": parsed_discounts,
                 "market_details": market_details,
+                "coupons": [],
+                "last_receipt": {},
             }
             return data, client.cookies
         except Exception as exc:

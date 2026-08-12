@@ -48,6 +48,16 @@
           "update_interval": "Update Interval (hours, min 1, max 24)",
           "card_number": "EDEKA / PAYBACK Card Barcode Number",
           "user_token": "EDEKA Account Session Token (Optional)",
+          "auto_activate_coupons": "Automatically activate coupons in background",
+          "action": "Select Action"
+        }
+      },
+      "login": {
+        "title": "EDEKA Account & PAYBACK Setup",
+        "description": "### 💳 EDEKA / PAYBACK Account\n\n- **Barcode / Card Number**: Enter your PAYBACK or EDEKA card number to display a live QR code for scanning at checkout.\n- **Account Session Token**: Enter your `KEYCLOAK_IDENTITY` cookie value (starts with `ey...`) from https://login.edeka (F12 > Application > Cookies).\n\n📖 For detailed instructions, see the EDEKA Integration Documentation on GitHub.",
+        "data": {
+          "card_number": "EDEKA / PAYBACK Card Barcode Number",
+          "user_token": "EDEKA Session Token (KEYCLOAK_IDENTITY cookie value)",
           "auto_activate_coupons": "Automatically activate coupons in background"
         }
       }

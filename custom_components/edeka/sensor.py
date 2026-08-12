@@ -42,7 +42,7 @@ async def async_setup_entry(
         update_before_add=False,
     )
 
-    if coordinator.user_token:
+    if coordinator.user_token and coordinator.user_token.strip():
         created_account_entities = hass.data[DOMAIN].setdefault(
             "_created_account_entities", set()
         )
@@ -226,6 +226,13 @@ class EdekaMarketStatusSensor(
                 )
                 opening_hours.append(f"{day.capitalize()}: {status}")
 
+        special_hours = [
+            f"{s.get('date')} ({s.get('reason')}): "
+            + (f"{s.get('from')} - {s.get('to')}" if s.get("open") else "Geschlossen")
+            for s in market_details.get("specialBusinessHours") or []
+            if s.get("date")
+        ]
+
         return {
             CONF_MARKET_ID: self._market_id,
             "phone": market_details.get("contact", {}).get("phoneNumber"),
@@ -235,7 +242,9 @@ class EdekaMarketStatusSensor(
             "latitude": coordinates.get("lat"),
             "longitude": coordinates.get("lon"),
             "opening_hours": opening_hours,
+            "special_opening_hours": special_hours,
             "services": services,
+            "payback_accepted": bool(market_details.get("payback")),
             ATTR_ATTRIBUTION: ATTRIBUTION,
         }
 
@@ -293,11 +302,7 @@ class EdekaActivatedCouponsSensor(
 
     @property
     def available(self) -> bool:
-        return (
-            self.coordinator.data is not None
-            and "coupons" in self.coordinator.data
-            and bool(self.coordinator.user_token)
-        )
+        return self.coordinator.data is not None and bool(self.coordinator.user_token)
 
 
 class EdekaAvailableCouponsSensor(
@@ -346,11 +351,7 @@ class EdekaAvailableCouponsSensor(
 
     @property
     def available(self) -> bool:
-        return (
-            self.coordinator.data is not None
-            and "coupons" in self.coordinator.data
-            and bool(self.coordinator.user_token)
-        )
+        return self.coordinator.data is not None and bool(self.coordinator.user_token)
 
 
 class EdekaLastReceiptSensor(
@@ -380,10 +381,12 @@ class EdekaLastReceiptSensor(
             return None
         receipt = self.coordinator.data.get("last_receipt")
         if not receipt:
-            return None
+            return "Keine Kassenbons"
         total = receipt.get("total")
         currency = receipt.get("currency", "EUR")
-        return f"{total} {currency}".strip() if total is not None else None
+        return (
+            f"{total} {currency}".strip() if total is not None else "Keine Kassenbons"
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -400,8 +403,4 @@ class EdekaLastReceiptSensor(
 
     @property
     def available(self) -> bool:
-        return (
-            self.coordinator.data is not None
-            and "last_receipt" in self.coordinator.data
-            and bool(self.coordinator.user_token)
-        )
+        return self.coordinator.data is not None and bool(self.coordinator.user_token)
