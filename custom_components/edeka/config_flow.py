@@ -11,6 +11,7 @@ from homeassistant.core import callback
 
 from .api import EdekaAPIClient, EdekaAPIError
 from .const import (
+    CONF_CARD_NUMBER,
     CONF_MARKET_ID,
     CONF_UPDATE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
@@ -215,6 +216,7 @@ class EdekaOptionsFlowHandler(config_entries.OptionsFlow):
         current_interval = self.config_entry.options.get(
             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
         )
+        current_card_number = self.config_entry.options.get(CONF_CARD_NUMBER, "")
 
         options_schema = vol.Schema(
             {
@@ -222,6 +224,7 @@ class EdekaOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Coerce(int),
                     vol.Range(min=MIN_UPDATE_INTERVAL, max=MAX_UPDATE_INTERVAL),
                 ),
+                vol.Optional(CONF_CARD_NUMBER, default=current_card_number): str,
             }
         )
 

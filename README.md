@@ -27,6 +27,10 @@ It groups all sensors under a single market device and implements advanced lock-
 - **🛒 Offers Sensor**:
   - Reports the **number of current weekly discounted items** as its state.
   - Attributes include: titles, base prices, active discount prices, categories, and direct links to product images.
+- **📸 EDEKA / PAYBACK Loyalty Card QR Code Entity (`image`)**:
+  - A dynamic 400x400 PNG QR Code entity rendering your EDEKA App / PAYBACK card barcode number for scanning directly at the checkout.
+- **📱 Dedicated EDEKA Account Device**:
+  - Grouped under a dedicated **EDEKA Account (DE)** device with direct link to your PAYBACK web portal.
 
 - **🏪 Market Status Sensor** *(disabled by default)*:
   - Reports **Open / Closed** based on real-time business hours from the market's profile.
