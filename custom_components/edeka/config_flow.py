@@ -8,6 +8,11 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 
 from .api import EdekaAPIClient
 from .const import (
@@ -319,9 +324,9 @@ class EdekaOptionsFlowHandler(config_entries.OptionsFlow):
             schema_dict[vol.Optional(CONF_CARD_NUMBER, default=current_card_number)] = (
                 str
             )
-            schema_dict[vol.Optional(CONF_REFRESH_TOKEN, default=current_user_token)] = (
-                str
-            )
+            schema_dict[
+                vol.Optional(CONF_REFRESH_TOKEN, default=current_user_token)
+            ] = str
             schema_dict[
                 vol.Optional(CONF_AUTO_ACTIVATE_COUPONS, default=current_auto_activate)
             ] = bool
