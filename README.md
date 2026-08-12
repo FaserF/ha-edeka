@@ -110,13 +110,16 @@ This integration is fully compatible with [HACS](https://hacs.xyz/).
 > [!TIP]
 > You can also enter the numeric **Market ID** directly (e.g. `8001860`) if you know it, and the integration will create the entry immediately without a search step.
 
-## 🛠️ Options Flow
+## 🛠️ Options Flow & Account Features
 
-You can customise the poll interval of the integration at any time:
+You can easily configure the integration in Home Assistant without any IT knowledge:
 
-1. Go to **Settings › Devices & Services**.
+1. Go to **Settings > Devices & Services**.
 2. Find **EDEKA Offers** and click **Configure**.
-3. Set the **Update Interval** in hours (default is 24 hours, minimum is 1 hour).
+3. **Update Interval**: Set how often offers refresh in hours (default: 24 hours).
+4. **EDEKA / PAYBACK Card Barcode Number** *(Optional)*: Enter your PAYBACK / EDEKA card barcode number to display a ready-to-scan QR Code on your dashboard or phone for checkouts.
+5. **EDEKA Account Session Token** *(Optional)*: Enter your EDEKA account session token to enable personal **eBons (Kassenbons)**, **Available Coupons**, and **Activated Coupons**.
+6. **Auto-Activate Coupons**: Enable this checkbox to automatically activate new coupons in the background as soon as they become available.
 
 ## 🃏 Lovelace Cards
 

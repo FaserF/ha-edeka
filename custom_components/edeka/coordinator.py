@@ -31,8 +31,10 @@ from .const import (
     ATTR_DISCOUNT_TITLE,
     ATTR_PICTURE,
     ATTR_VALID_DATE,
+    CONF_AUTO_ACTIVATE_COUPONS,
     CONF_CARD_NUMBER,
     CONF_MARKET_ID,
+    CONF_REFRESH_TOKEN,
     CONF_UPDATE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
@@ -52,6 +54,8 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
         config = {**entry.data, **entry.options}
         self.market_id: str = str(config[CONF_MARKET_ID])
         self.card_number: str | None = config.get(CONF_CARD_NUMBER)
+        self.user_token: str | None = config.get(CONF_REFRESH_TOKEN)
+        self.auto_activate_coupons: bool = config.get(CONF_AUTO_ACTIVATE_COUPONS, False)
         self.config_entry = entry
 
         self.account_key = "account_de"

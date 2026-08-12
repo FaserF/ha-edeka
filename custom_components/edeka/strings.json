@@ -5,7 +5,17 @@
       "user": {
         "description": "Enter your EDEKA Market ID directly, or type your city / postal code to search for nearby EDEKA markets.",
         "data": {
-          "search_or_id": "EDEKA Market ID or Search Query"
+          "search_or_id": "EDEKA Market ID or Search Query",
+          "login_to_edeka_account": "Configure EDEKA / PAYBACK Account"
+        }
+      },
+      "login": {
+        "title": "EDEKA Customer Account Setup",
+        "description": "Enter your PAYBACK / EDEKA card number to generate a QR Code, or your Account Session Token to view eBons and coupons.",
+        "data": {
+          "card_number": "EDEKA / PAYBACK Card Barcode Number",
+          "user_token": "EDEKA Account Session Token (Optional)",
+          "auto_activate_coupons": "Automatically activate coupons in background"
         }
       },
       "select_market": {
@@ -36,7 +46,9 @@
         "title": "Configure EDEKA weekly offers",
         "data": {
           "update_interval": "Update Interval (hours, min 1, max 24)",
-          "card_number": "EDEKA / PAYBACK Card Barcode Number"
+          "card_number": "EDEKA / PAYBACK Card Barcode Number",
+          "user_token": "EDEKA Account Session Token (Optional)",
+          "auto_activate_coupons": "Automatically activate coupons in background"
         }
       }
     }

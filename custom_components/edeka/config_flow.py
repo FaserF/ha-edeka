@@ -9,10 +9,12 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
-from .api import EdekaAPIClient, EdekaAPIError
+from .api import EdekaAPIClient
 from .const import (
+    CONF_AUTO_ACTIVATE_COUPONS,
     CONF_CARD_NUMBER,
     CONF_MARKET_ID,
+    CONF_REFRESH_TOKEN,
     CONF_UPDATE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
@@ -32,6 +34,37 @@ class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self._search_results: list[dict[str, Any]] = []
         self._discovery_data: dict[str, Any] = {}
+        self._login_requested: bool = False
+        self._selected_entry_data: dict[str, Any] = {}
+        self._selected_title: str = ""
+
+    async def async_step_login(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle account token / card number configuration step."""
+        if user_input is not None:
+            self._selected_entry_data[CONF_CARD_NUMBER] = user_input.get(
+                CONF_CARD_NUMBER, ""
+            )
+            self._selected_entry_data[CONF_REFRESH_TOKEN] = user_input.get(
+                CONF_REFRESH_TOKEN, ""
+            )
+            self._selected_entry_data[CONF_AUTO_ACTIVATE_COUPONS] = user_input.get(
+                CONF_AUTO_ACTIVATE_COUPONS, False
+            )
+            return self.async_create_entry(
+                title=self._selected_title,
+                data=self._selected_entry_data,
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_CARD_NUMBER, default=""): str,
+                vol.Optional(CONF_REFRESH_TOKEN, default=""): str,
+                vol.Optional(CONF_AUTO_ACTIVATE_COUPONS, default=False): bool,
+            }
+        )
+        return self.async_show_form(step_id="login", data_schema=schema)
 
     async def async_step_integration_discovery(
         self, discovery_info: dict[str, Any]
@@ -76,6 +109,9 @@ class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             user_value = user_input["search_or_id"].strip()
+            self._login_requested = bool(
+                user_input.get("login_to_edeka_account", False)
+            )
 
             # Direct numeric ID check
             if user_value.isdigit() and len(user_value) >= 5:
@@ -108,12 +144,17 @@ class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._search_results = results
                     return await self.async_step_select_market()
 
-            except (EdekaAPIError, TimeoutError, OSError) as exc:
+            except Exception as exc:  # noqa: BLE001
                 _LOGGER.error("EDEKA market search error: %s", exc)
                 errors["base"] = "search_failed"
 
         # Show input form for search queries or direct IDs
-        schema = vol.Schema({vol.Required("search_or_id"): str})
+        schema = vol.Schema(
+            {
+                vol.Required("search_or_id"): str,
+                vol.Optional("login_to_edeka_account", default=False): bool,
+            }
+        )
         return self.async_show_form(
             step_id="user",
             data_schema=schema,
@@ -150,6 +191,11 @@ class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     entry_data["zip_code"] = addr.get("city", {}).get("zipCode") or ""
                     entry_data["url"] = res.get("url") or ""
                     break
+
+            if self._login_requested:
+                self._selected_entry_data = entry_data
+                self._selected_title = selected_name
+                return await self.async_step_login()
 
             _LOGGER.info(
                 "Creating config entry for market: %s (ID: %s)",
@@ -199,33 +245,115 @@ class EdekaOptionsFlowHandler(config_entries.OptionsFlow):
         self._config_entry = config_entry
 
     async def async_step_init(
-        self, user_input: dict | None = None
+        self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Manage the options."""
-        _LOGGER.debug(
-            "EdekaOptionsFlowHandler async_step_init called with input: %s", user_input
-        )
         if user_input is not None:
-            _LOGGER.info(
-                "Updating options for EDEKA entry %s: %s",
-                self.config_entry.entry_id,
-                user_input,
-            )
-            return self.async_create_entry(title="", data=user_input)
+            action = user_input.get("action", "save")
+            if action == "login":
+                return await self.async_step_login()
+            if action == "logout":
+                new_data = {
+                    k: v
+                    for k, v in self._config_entry.data.items()
+                    if k not in (CONF_REFRESH_TOKEN, CONF_CARD_NUMBER)
+                }
+                new_options = {
+                    k: v
+                    for k, v in self._config_entry.options.items()
+                    if k not in (CONF_REFRESH_TOKEN, CONF_CARD_NUMBER)
+                }
+                self.hass.config_entries.async_update_entry(
+                    self._config_entry, data=new_data, options=new_options
+                )
+                return self.async_create_entry(title="", data=new_options)
 
-        current_interval = self.config_entry.options.get(
+            return self.async_create_entry(
+                title="",
+                data={
+                    CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
+                    CONF_CARD_NUMBER: str(user_input.get(CONF_CARD_NUMBER, "")).strip(),
+                    CONF_REFRESH_TOKEN: str(
+                        user_input.get(CONF_REFRESH_TOKEN, "")
+                    ).strip(),
+                    CONF_AUTO_ACTIVATE_COUPONS: bool(
+                        user_input.get(CONF_AUTO_ACTIVATE_COUPONS, False)
+                    ),
+                },
+            )
+
+        current_interval = self._config_entry.options.get(
             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
         )
-        current_card_number = self.config_entry.options.get(CONF_CARD_NUMBER, "")
+        current_card_number = self._config_entry.options.get(CONF_CARD_NUMBER, "")
+        current_user_token = self._config_entry.options.get(
+            CONF_REFRESH_TOKEN, self._config_entry.data.get(CONF_REFRESH_TOKEN, "")
+        )
+        current_auto_activate = self._config_entry.options.get(
+            CONF_AUTO_ACTIVATE_COUPONS, False
+        )
+        is_logged_in = bool(current_user_token or current_card_number)
 
-        options_schema = vol.Schema(
-            {
-                vol.Optional(CONF_UPDATE_INTERVAL, default=current_interval): vol.All(
-                    vol.Coerce(int),
-                    vol.Range(min=MIN_UPDATE_INTERVAL, max=MAX_UPDATE_INTERVAL),
-                ),
-                vol.Optional(CONF_CARD_NUMBER, default=current_card_number): str,
-            }
+        action_choices: dict[str, str] = {"save": "Save settings"}
+        if is_logged_in:
+            action_choices["login"] = "Update Account / Loyalty Card"
+            action_choices["logout"] = "Log out / Remove Account Data"
+        else:
+            action_choices["login"] = "Configure EDEKA / PAYBACK Account"
+
+        schema_dict: dict[Any, Any] = {
+            vol.Optional(
+                CONF_UPDATE_INTERVAL, default=current_interval
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=MIN_UPDATE_INTERVAL,
+                    max=MAX_UPDATE_INTERVAL,
+                    step=1,
+                    unit_of_measurement="hours",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+        }
+
+        if is_logged_in:
+            schema_dict[vol.Optional(CONF_CARD_NUMBER, default=current_card_number)] = (
+                str
+            )
+            schema_dict[vol.Optional(CONF_REFRESH_TOKEN, default=current_user_token)] = (
+                str
+            )
+            schema_dict[
+                vol.Optional(CONF_AUTO_ACTIVATE_COUPONS, default=current_auto_activate)
+            ] = bool
+
+        schema_dict[vol.Required("action", default="save")] = vol.In(action_choices)
+
+        options_schema = vol.Schema(schema_dict)
+        return self.async_show_form(step_id="init", data_schema=options_schema)
+
+    async def async_step_login(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle account token / card number configuration in options."""
+        if user_input is not None:
+            new_options = {**self._config_entry.options, **user_input}
+            return self.async_create_entry(title="", data=new_options)
+
+        current_card_number = self._config_entry.options.get(CONF_CARD_NUMBER, "")
+        current_user_token = self._config_entry.options.get(
+            CONF_REFRESH_TOKEN, self._config_entry.data.get(CONF_REFRESH_TOKEN, "")
+        )
+        current_auto_activate = self._config_entry.options.get(
+            CONF_AUTO_ACTIVATE_COUPONS, False
         )
 
-        return self.async_show_form(step_id="init", data_schema=options_schema)
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_CARD_NUMBER, default=current_card_number): str,
+                vol.Optional(CONF_REFRESH_TOKEN, default=current_user_token): str,
+                vol.Optional(
+                    CONF_AUTO_ACTIVATE_COUPONS, default=current_auto_activate
+                ): bool,
+            }
+        )
+        return self.async_show_form(step_id="login", data_schema=schema)
