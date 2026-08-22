@@ -102,8 +102,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
         if not self.data or not self._last_success:
             return False
 
-        # If market_details is empty or missing, data is not fully valid
-        if not self.data.get("market_details"):
+        if "discounts" not in self.data:
             return False
 
         now = dt_util.now()
@@ -161,12 +160,12 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             )
             return self.data
 
-        # Restart-resistance: skip if last fetch was very recent and we have market details
-        has_market_details = self.data and self.data.get("market_details")
+        # Restart-resistance: skip if last fetch was very recent
         if (
             not self._force_update
             and self._last_success is not None
-            and has_market_details
+            and self.data
+            and "discounts" in self.data
         ):
             time_since = dt_util.now() - self._last_success
             effective_interval = self.update_interval or timedelta(

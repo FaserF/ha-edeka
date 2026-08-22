@@ -112,7 +112,11 @@ This integration is fully compatible with [HACS](https://hacs.xyz/).
 5. Submit to create the device and entities.
 
 > [!TIP]
-> You can also enter the numeric **Market ID** directly (e.g. `8001860`) if you know it, and the integration will create the entry immediately without a search step.
+> **How to find your Market ID manually (e.g. if automatic search is rate-limited):**
+> 1. Go to [edeka.de/marktsuche.jsp](https://www.edeka.de/marktsuche.jsp) and search for your local store.
+> 2. Click on your store to view its market page.
+> 3. The **Market ID** can be found in the URL (e.g., `https://www.edeka.de/eh/nord/e-center-8001860/...` -> Market ID is `8001860`) or in the store details.
+> 4. Enter this numeric ID directly into the integration setup to bypass the market search!
 
 ## 🔐 EDEKA / PAYBACK Login *(optional)*
 
