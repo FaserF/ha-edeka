@@ -78,7 +78,7 @@ class EdekaAPIClient:
             return response.json()
         except Exception as exc:
             _LOGGER.error("EDEKA API request failed for %s: %s", log_endpoint, exc)
-            raise RuntimeError(f"EDEKA API request failed: {exc}") from exc
+            raise EdekaAPIError(f"EDEKA API request failed: {exc}") from exc
 
     def market_search(self, query: str) -> list[dict[str, Any]]:
         """Search for EDEKA markets using ZIP code, city name, or market name."""

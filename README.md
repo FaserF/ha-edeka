@@ -172,16 +172,6 @@ You can easily configure or update the integration at any time:
    - **💳 Configure EDEKA / PAYBACK Account**: Add or update your Loyalty Card number, Session Token, or Auto-Activation preference.
    - **🚪 Log out / Remove Account Data**: Clears account credentials and removes the Account Device.
 
-## 🃏 Lovelace Cards
-
-The community has built dedicated cards to display EDEKA discounts beautifully in your dashboard.
-
-### Custom EDEKA Offers Card
-A dedicated Lovelace card maintained by the community:
-
-[![EDEKA Offers Card](https://img.shields.io/badge/Lovelace-EDEKA%20Discounts%20Card-brightgreen?style=for-the-badge&logo=home-assistant)](https://github.com/schblondie/ha-edeka-discounts-card)
-
----
 
 ## 🧑‍💻 Development
 
