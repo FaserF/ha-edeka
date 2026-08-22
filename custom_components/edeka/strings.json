@@ -35,7 +35,7 @@
     },
     "error": {
       "invalid_market_id": "Please enter a valid EDEKA market ID.",
-      "search_failed": "EDEKA market search API is currently rate-limited/unavailable. Please enter the numeric Market ID directly (see README: https://github.com/FaserF/ha-edeka#️-configuration).",
+      "search_failed": "EDEKA market search API is currently rate-limited or unavailable. Please enter the numeric Market ID directly (see documentation: {doc_url}).",
       "no_markets_found": "No EDEKA markets found matching your query. Please try another search or enter the numeric Market ID directly.",
       "unknown": "Unknown Error occurred."
     }

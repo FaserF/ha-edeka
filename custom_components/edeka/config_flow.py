@@ -164,6 +164,9 @@ class EdekaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=schema,
             errors=errors,
+            description_placeholders={
+                "doc_url": "https://github.com/FaserF/ha-edeka#️-configuration"
+            },
         )
 
     async def async_step_select_market(

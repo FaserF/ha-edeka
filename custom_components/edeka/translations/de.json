@@ -35,7 +35,7 @@
     },
     "error": {
       "invalid_market_id": "Bitte gib eine gültige EDEKA-Markt-ID ein.",
-      "search_failed": "Die EDEKA-Marktsuche-API ist aktuell ratenlimitiert/nicht erreichbar. Bitte gib die numerische Markt-ID direkt ein (siehe README: https://github.com/FaserF/ha-edeka#️-configuration).",
+      "search_failed": "Die EDEKA-Marktsuche-API ist aktuell ratenlimitiert oder nicht erreichbar. Bitte gib die numerische Markt-ID direkt ein (siehe Dokumentation: {doc_url}).",
       "no_markets_found": "Keine EDEKA-Märkte gefunden, die deiner Suchanfrage entsprechen. Bitte versuche eine andere Suche oder gib die numerische Markt-ID direkt ein.",
       "unknown": "Ein unbekannter Fehler ist aufgetreten."
     }
