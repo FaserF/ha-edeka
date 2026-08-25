@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import os
 import re
@@ -33,10 +34,8 @@ def main():
     )
     # Revert modified files to keep clean state
     for path in ["custom_components/edeka/manifest.json", "pyproject.toml"]:
-        try:
+        with contextlib.suppress(subprocess.SubprocessError, OSError):
             run_cmd(["git", "checkout", "--", path])
-        except (subprocess.SubprocessError, OSError):
-            pass
 
     print(f"Calculated Version: {version}")
     tag = f"v{version}"
@@ -57,7 +56,7 @@ def main():
         raw_tags = run_cmd(
             ["git", "tag", "-l", "[0-9]*", "v[0-9]*", "--sort=-v:refname"]
         ).splitlines()
-    except (subprocess.SubprocessError, OSError):
+    except subprocess.SubprocessError, OSError:
         raw_tags = []
 
     semver_tags = []
@@ -95,7 +94,7 @@ def main():
     diff_range = f"{changelog_from}..HEAD" if changelog_from else "HEAD"
     try:
         total_commit_count = int(run_cmd(["git", "rev-list", "--count", diff_range]))
-    except (subprocess.SubprocessError, OSError, ValueError):
+    except subprocess.SubprocessError, OSError, ValueError:
         total_commit_count = 0
 
     # 4. Generate Changelog
@@ -135,7 +134,7 @@ def main():
         if changelog_from:
             diff_cmd.append(changelog_from)
         changed_files = run_cmd(diff_cmd).splitlines()
-    except (subprocess.SubprocessError, OSError):
+    except subprocess.SubprocessError, OSError:
         pass
 
     changed_files = [f.strip() for f in changed_files if f.strip()]
@@ -173,7 +172,7 @@ def main():
                 re.MULTILINE,
             )
         )
-    except (subprocess.SubprocessError, OSError):
+    except subprocess.SubprocessError, OSError:
         pass
 
     # Determine risk severity

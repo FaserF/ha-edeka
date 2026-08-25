@@ -11,9 +11,10 @@ Anti-ban strategies:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant import config_entries
@@ -134,7 +135,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             if "last_success" in cache:
                 try:
                     self._last_success = dt_util.parse_datetime(cache["last_success"])
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     self._last_success = None
         else:
             _LOGGER.debug("No cached EDEKA data found for market %s", self.market_id)
@@ -360,12 +361,12 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
                 # Convert milliseconds timestamp to ISO format string
                 valid_date_str = ""
                 if offer.get("gueltig_bis"):
-                    try:
+                    with contextlib.suppress(
+                        ValueError, TypeError, OverflowError, OSError
+                    ):
                         valid_date_str = datetime.fromtimestamp(
-                            offer["gueltig_bis"] / 1000.0, tz=timezone.utc
+                            offer["gueltig_bis"] / 1000.0, tz=UTC
                         ).isoformat()
-                    except (ValueError, TypeError, OverflowError, OSError):
-                        pass
 
                 parsed_discounts.append(
                     {
