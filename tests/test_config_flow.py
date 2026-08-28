@@ -106,4 +106,3 @@ async def test_options_flow_product_filters(hass: HomeAssistant) -> None:
     assert result2["type"] == FlowResultType.CREATE_ENTRY
     assert result2["data"][CONF_UPDATE_INTERVAL] == 12
     assert result2["data"][CONF_PRODUCT_FILTERS] == ["Cola", "Pizza"]
-

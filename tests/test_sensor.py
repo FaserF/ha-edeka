@@ -149,7 +149,9 @@ async def test_product_filter_sensor_setup(hass: HomeAssistant) -> None:
     assert isinstance(entities[3], EdekaProductFilterSensor)
 
 
-async def test_product_filter_sensor_matching_and_attributes(hass: HomeAssistant) -> None:
+async def test_product_filter_sensor_matching_and_attributes(
+    hass: HomeAssistant,
+) -> None:
     """Test matching and attribute values of EdekaProductFilterSensor."""
     entry = MockConfigEntry(domain=DOMAIN, data={CONF_MARKET_ID: "440421"}, options={})
     entry.add_to_hass(hass)
@@ -187,7 +189,10 @@ async def test_product_filter_sensor_matching_and_attributes(hass: HomeAssistant
     assert sensor.extra_state_attributes["product_title"] == "Pringles Original 185g"
     assert sensor.extra_state_attributes["category"] == "Snacks & Chips"
     assert sensor.extra_state_attributes["valid_until"] == "2026-08-30T23:59:59+00:00"
-    assert sensor.extra_state_attributes["picture_link"] == "https://example.com/pringles.png"
+    assert (
+        sensor.extra_state_attributes["picture_link"]
+        == "https://example.com/pringles.png"
+    )
     assert len(sensor.extra_state_attributes["matches"]) == 2
     assert "attribution" in sensor.extra_state_attributes
 
@@ -210,4 +215,3 @@ async def test_product_filter_sensor_no_match(hass: HomeAssistant) -> None:
     assert sensor.extra_state_attributes["base_price"] is None
     assert sensor.extra_state_attributes["product_title"] is None
     assert sensor.extra_state_attributes["matches"] == []
-

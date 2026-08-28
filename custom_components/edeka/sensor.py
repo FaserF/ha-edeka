@@ -460,9 +460,7 @@ class EdekaProductFilterSensor(
                 matches.append(offer)
         return matches
 
-    def _get_best_offer(
-        self, matches: list[dict[str, Any]]
-    ) -> dict[str, Any] | None:
+    def _get_best_offer(self, matches: list[dict[str, Any]]) -> dict[str, Any] | None:
         """Return the offer with the lowest price."""
         if not matches:
             return None
