@@ -13,7 +13,12 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    ATTR_BASE_PRICE,
+    ATTR_CATEGORY,
+    ATTR_DISCOUNT_PRICE,
+    ATTR_DISCOUNT_TITLE,
     ATTR_DISCOUNTS,
+    ATTR_PICTURE,
     ATTR_VALID_DATE,
     ATTRIBUTION,
     CONF_MARKET_ID,
@@ -34,11 +39,16 @@ async def async_setup_entry(
     _LOGGER.debug(
         "Setting up EDEKA Offers sensors for market %s", coordinator.market_id
     )
+    entities: list[SensorEntity] = [
+        EdekaOffersSensor(coordinator),
+        EdekaMarketStatusSensor(coordinator),
+    ]
+
+    for product_filter in coordinator.product_filters:
+        entities.append(EdekaProductFilterSensor(coordinator, product_filter))
+
     async_add_entities(
-        [
-            EdekaOffersSensor(coordinator),
-            EdekaMarketStatusSensor(coordinator),
-        ],
+        entities,
         update_before_add=False,
     )
 
@@ -404,3 +414,119 @@ class EdekaLastReceiptSensor(
     @property
     def available(self) -> bool:
         return self.coordinator.data is not None and bool(self.coordinator.user_token)
+
+
+class EdekaProductFilterSensor(
+    CoordinatorEntity[EdekaDataUpdateCoordinator], SensorEntity
+):
+    """Represents a filtered product offer search sensor for an EDEKA market."""
+
+    _attr_icon = "mdi:tag-search"
+    _attr_has_entity_name = True
+    _unrecorded_attributes = frozenset({"matches"})
+
+    def __init__(
+        self, coordinator: EdekaDataUpdateCoordinator, product_filter: str
+    ) -> None:
+        """Initialize the product filter sensor."""
+        super().__init__(coordinator)
+        self._product_filter = product_filter
+        self._market_id = coordinator.market_id
+        self._attr_name = product_filter
+        self._attr_unique_id = (
+            f"edeka_{self._market_id}_filter_{product_filter.lower().replace(' ', '_')}"
+        )
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, self._market_id)},
+            name=coordinator.config_entry.title,
+            manufacturer="EDEKA",
+            model="Market Offers",
+            entry_type=None,
+            configuration_url=coordinator.configuration_url,
+        )
+
+    def _get_matching_offers(self) -> list[dict[str, Any]]:
+        """Calculate matching offers using case-insensitive term matching on product, category, base_price."""
+        if not self.coordinator.data:
+            return []
+        discounts: list[dict[str, Any]] = self.coordinator.data.get("discounts", [])
+        term = self._product_filter.lower()
+        matches = []
+        for offer in discounts:
+            product = str(offer.get(ATTR_DISCOUNT_TITLE) or "").lower()
+            category = str(offer.get(ATTR_CATEGORY) or "").lower()
+            base_price = str(offer.get(ATTR_BASE_PRICE) or "").lower()
+            if term in product or term in category or term in base_price:
+                matches.append(offer)
+        return matches
+
+    def _get_best_offer(
+        self, matches: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        """Return the offer with the lowest price."""
+        if not matches:
+            return None
+
+        def _parse_price(item: dict[str, Any]) -> float:
+            val = item.get(ATTR_DISCOUNT_PRICE)
+            if isinstance(val, (int, float)):
+                return float(val)
+            if isinstance(val, str):
+                cleaned = val.replace("€", "").replace(",", ".").strip()
+                try:
+                    return float(cleaned)
+                except ValueError:
+                    return float("inf")
+            return float("inf")
+
+        return min(matches, key=_parse_price)
+
+    @property
+    def native_value(self) -> str:
+        """Return the best price found or 'Nicht im Angebot'."""
+        matches = self._get_matching_offers()
+        best_offer = self._get_best_offer(matches)
+        if not best_offer:
+            return "Nicht im Angebot"
+
+        price = best_offer.get(ATTR_DISCOUNT_PRICE)
+        if price is None:
+            return "Nicht im Angebot"
+
+        if isinstance(price, (int, float)):
+            return f"{price:.2f} €"
+
+        price_str = str(price).strip()
+        if price_str and not price_str.endswith("€"):
+            return f"{price_str} €"
+        return price_str
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return sensor attributes for the product filter."""
+        matches = self._get_matching_offers()
+        best_offer = self._get_best_offer(matches)
+        best_price = best_offer.get(ATTR_DISCOUNT_PRICE) if best_offer else None
+
+        return {
+            "filter": self._product_filter,
+            "on_sale": bool(matches),
+            "match_count": len(matches),
+            "best_price": best_price,
+            "base_price": best_offer.get(ATTR_BASE_PRICE) if best_offer else None,
+            "product_title": (
+                best_offer.get(ATTR_DISCOUNT_TITLE) if best_offer else None
+            ),
+            "category": best_offer.get(ATTR_CATEGORY) if best_offer else None,
+            "valid_until": best_offer.get(ATTR_VALID_DATE) if best_offer else None,
+            "picture_link": best_offer.get(ATTR_PICTURE) if best_offer else None,
+            "matches": matches,
+            ATTR_ATTRIBUTION: ATTRIBUTION,
+        }
+
+    @property
+    def available(self) -> bool:
+        """Return True if coordinator has data."""
+        return (
+            self.coordinator.last_update_success or self.coordinator.is_data_valid
+        ) and self.coordinator.data is not None

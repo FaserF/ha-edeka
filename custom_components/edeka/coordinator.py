@@ -35,6 +35,7 @@ from .const import (
     CONF_AUTO_ACTIVATE_COUPONS,
     CONF_CARD_NUMBER,
     CONF_MARKET_ID,
+    CONF_PRODUCT_FILTERS,
     CONF_REFRESH_TOKEN,
     CONF_UPDATE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
@@ -57,6 +58,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
         self.card_number: str | None = config.get(CONF_CARD_NUMBER)
         self.user_token: str | None = config.get(CONF_REFRESH_TOKEN)
         self.auto_activate_coupons: bool = config.get(CONF_AUTO_ACTIVATE_COUPONS, False)
+        self.product_filters: list[str] = list(config.get(CONF_PRODUCT_FILTERS, []))
         self.config_entry = entry
 
         self.account_key = "account_de"

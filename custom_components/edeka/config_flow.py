@@ -12,6 +12,9 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 
 from .api import EdekaAPIClient
@@ -19,6 +22,7 @@ from .const import (
     CONF_AUTO_ACTIVATE_COUPONS,
     CONF_CARD_NUMBER,
     CONF_MARKET_ID,
+    CONF_PRODUCT_FILTERS,
     CONF_REFRESH_TOKEN,
     CONF_UPDATE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
@@ -280,6 +284,9 @@ class EdekaOptionsFlowHandler(config_entries.OptionsFlow):
                 title="",
                 data={
                     CONF_UPDATE_INTERVAL: int(user_input[CONF_UPDATE_INTERVAL]),
+                    CONF_PRODUCT_FILTERS: list(
+                        user_input.get(CONF_PRODUCT_FILTERS, [])
+                    ),
                     CONF_CARD_NUMBER: str(user_input.get(CONF_CARD_NUMBER, "")).strip(),
                     CONF_REFRESH_TOKEN: str(
                         user_input.get(CONF_REFRESH_TOKEN, "")
@@ -292,6 +299,9 @@ class EdekaOptionsFlowHandler(config_entries.OptionsFlow):
 
         current_interval = self._config_entry.options.get(
             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+        )
+        current_product_filters = self._config_entry.options.get(
+            CONF_PRODUCT_FILTERS, []
         )
         current_card_number = self._config_entry.options.get(CONF_CARD_NUMBER, "")
         current_user_token = self._config_entry.options.get(
@@ -318,6 +328,17 @@ class EdekaOptionsFlowHandler(config_entries.OptionsFlow):
                         step=1,
                         unit_of_measurement="hours",
                         mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(
+                    CONF_PRODUCT_FILTERS,
+                    default=current_product_filters,
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=list(current_product_filters),
+                        multiple=True,
+                        custom_value=True,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Required("action", default="save"): vol.In(action_choices),

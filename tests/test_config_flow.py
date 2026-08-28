@@ -72,3 +72,38 @@ async def test_config_flow_search_and_select(hass: HomeAssistant) -> None:
             "zip_code": "22880",
             "url": "https://www.edeka.de/eh/nord/e-neukauf-klein-bahnhofstr.-31/index.jsp",
         }
+
+
+async def test_options_flow_product_filters(hass: HomeAssistant) -> None:
+    """Test options flow with product filters."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.edeka.const import (
+        CONF_MARKET_ID,
+        CONF_PRODUCT_FILTERS,
+        CONF_UPDATE_INTERVAL,
+    )
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_MARKET_ID: "123456"},
+        options={CONF_UPDATE_INTERVAL: 24, CONF_PRODUCT_FILTERS: ["Cola"]},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result2 = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_UPDATE_INTERVAL: 12,
+            CONF_PRODUCT_FILTERS: ["Cola", "Pizza"],
+            "action": "save",
+        },
+    )
+    assert result2["type"] == FlowResultType.CREATE_ENTRY
+    assert result2["data"][CONF_UPDATE_INTERVAL] == 12
+    assert result2["data"][CONF_PRODUCT_FILTERS] == ["Cola", "Pizza"]
+
