@@ -101,18 +101,27 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
 
     @property
     def is_data_valid(self) -> bool:
-        """Return True if the current cached data is from the current week and valid."""
-        if not self.data or not self._last_success:
-            return False
-
-        if "discounts" not in self.data:
+        """Return True if cached data is still valid for the current week (until Sunday 23:59:59)."""
+        if not self.data or "discounts" not in self.data:
             return False
 
         now = dt_util.now()
         current_monday = (now - timedelta(days=now.weekday())).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        return self._last_success >= current_monday
+        if self._last_success and self._last_success >= current_monday:
+            return True
+
+        valid_until = self.data.get("valid_until")
+        if valid_until:
+            try:
+                val_date = dt_util.parse_date(str(valid_until).split("T")[0])
+                if val_date and val_date >= now.date():
+                    return True
+            except Exception:  # noqa: BLE001
+                pass
+
+        return False
 
     async def async_load_cache(self) -> None:
         """Load cached data from HA storage (restart-resistance)."""
@@ -342,6 +351,15 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
                     backoff_minutes,
                     err,
                 )
+
+            # If we have valid cached data for the current week, fall back to it so entities stay available
+            if self.is_data_valid and self.data:
+                _LOGGER.warning(
+                    "EDEKA market %s: fetch failed, but cached data for the current week is valid – continuing with cached data. Error: %s",
+                    self.market_id,
+                    err,
+                )
+                return self.data
 
             raise UpdateFailed(
                 f"Error fetching EDEKA offers for market {self.market_id}: {err}"
