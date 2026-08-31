@@ -43,6 +43,13 @@ It groups all sensors under a single market device and implements advanced lock-
 - **🛒 Offers Sensor**:
   - Reports the **number of current weekly discounted items** as its state.
   - Attributes include: `national` (`true` if nationwide fallback offers, `false` if local market flyer offers), titles, base prices, active discount prices, categories, and direct links to product images.
+
+> [!WARNING]
+> **Offers Limitation — Local Store Offers vs. National Fallback**
+>
+> - **Local Market Flyer Offers**: If an individual EDEKA merchant/franchise store has digitized their local weekly offers in the EDEKA Web API, all items (typically 100–300+ items) are returned and the sensor attribute `national` is set to `false`.
+> - **National Fallback (20 items)**: Some independent merchants do not publish their local store flyers into the central web API. In this case, the EDEKA API returns `national: true` with a fallback set of exactly 20 nationwide campaign offers (the sensor's `national` attribute will be `true`).
+
 - **📸 EDEKA / PAYBACK Loyalty Card QR Code Entity (`image`)**:
   - A dynamic 400x400 PNG QR Code entity rendering your EDEKA App / PAYBACK card barcode number for scanning directly at the checkout.
 - **📱 Dedicated EDEKA Account Device**:
@@ -140,12 +147,6 @@ Connecting your EDEKA account currently enables **one** additional feature:
 
 - **📸 EDEKA / PAYBACK Loyalty Card QR Code**: Displays a live, scannable QR Code entity on your Home Assistant dashboard for scanning at the store checkout.
 
-> [!WARNING]
-> **Current Limitations — Local Store Offers vs. National Fallback**
->
-> - **Local Market Flyer Offers**: If an individual EDEKA merchant/franchise store has digitized their local weekly offers in the EDEKA Web API, all items (typically 100–300+ items) are returned and the sensor attribute `national` is set to `false`.
-> - **National Fallback (20 items)**: Some independent merchants do not publish their local store flyers into the central web API. In this case, the EDEKA API returns `national: true` with a fallback set of exactly 20 nationwide campaign offers (the sensor's `national` attribute will be `true`).
->
 > [!WARNING]
 > **Current Limitations — eBons & Coupons**
 >
