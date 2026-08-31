@@ -18,6 +18,7 @@ from .const import (
     ATTR_DISCOUNT_PRICE,
     ATTR_DISCOUNT_TITLE,
     ATTR_DISCOUNTS,
+    ATTR_NATIONAL,
     ATTR_PICTURE,
     ATTR_VALID_DATE,
     ATTRIBUTION,
@@ -142,6 +143,7 @@ class EdekaOffersSensor(CoordinatorEntity[EdekaDataUpdateCoordinator], SensorEnt
 
         return {
             CONF_MARKET_ID: self._market_id,
+            ATTR_NATIONAL: bool(data.get("national", False)),
             ATTR_DISCOUNTS: discounts,
             ATTR_VALID_DATE: valid_until,
             ATTR_ATTRIBUTION: ATTRIBUTION,

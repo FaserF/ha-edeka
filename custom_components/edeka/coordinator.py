@@ -374,7 +374,17 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
         )
         try:
             client = EdekaAPIClient(cookies=cookies)
-            raw_offers = client.get_offers(self.market_id)
+            offers_response = client.get_offers(self.market_id)
+            raw_offers = (
+                offers_response.get("docs", [])
+                if isinstance(offers_response, dict)
+                else offers_response
+            )
+            is_national = (
+                bool(offers_response.get("national", False))
+                if isinstance(offers_response, dict)
+                else False
+            )
 
             parsed_discounts = []
             for offer in raw_offers:
@@ -470,6 +480,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             data = {
                 "discounts": parsed_discounts,
                 "market_details": market_details,
+                "national": is_national,
                 "coupons": [],
                 "last_receipt": {},
             }

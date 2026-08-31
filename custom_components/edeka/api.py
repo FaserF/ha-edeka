@@ -108,7 +108,7 @@ class EdekaAPIClient:
                 return markets[0]
         return None
 
-    def get_offers(self, market_id: str) -> list[dict[str, Any]]:
+    def get_offers(self, market_id: str) -> dict[str, Any]:
         """Fetch offers for the given market ID."""
         _LOGGER.debug("Fetching offers for EDEKA market_id: %s", market_id)
         url = "https://www.edeka.de/eh/service/eh/offers"
@@ -117,13 +117,14 @@ class EdekaAPIClient:
         if isinstance(data, dict):
             offers = data.get("docs", [])
             _LOGGER.debug(
-                "Offers parsed successfully for market_id %s: %d offers",
+                "Offers parsed successfully for market_id %s: %d offers (national: %s)",
                 market_id,
                 len(offers),
+                data.get("national"),
             )
-            return offers
+            return data
 
         _LOGGER.warning(
             "Offers request for market_id %s did not return a dictionary", market_id
         )
-        return []
+        return {}

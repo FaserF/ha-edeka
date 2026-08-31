@@ -109,6 +109,7 @@ async def test_offers_sensor_value_and_attributes(hass: HomeAssistant) -> None:
     assert sensor.native_value == 1
     assert len(sensor.extra_state_attributes["discounts"]) == 1
     assert sensor.extra_state_attributes["market_id"] == "440421"
+    assert sensor.extra_state_attributes["national"] is False
 
 
 async def test_market_status_sensor_value_and_attributes(hass: HomeAssistant) -> None:

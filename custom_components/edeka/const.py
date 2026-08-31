@@ -28,6 +28,7 @@ ATTR_BASE_PRICE = "base_price"
 ATTR_PICTURE = "picture_link"
 ATTR_VALID_DATE = "valid_until"
 ATTR_CATEGORY = "category"
+ATTR_NATIONAL = "national"
 
 # Issue IDs for HA Repairs
 ISSUE_ID_CONNECTION = "connection_error"

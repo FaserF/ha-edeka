@@ -42,7 +42,7 @@ It groups all sensors under a single market device and implements advanced lock-
 
 - **🛒 Offers Sensor**:
   - Reports the **number of current weekly discounted items** as its state.
-  - Attributes include: titles, base prices, active discount prices, categories, and direct links to product images.
+  - Attributes include: `national` (`true` if nationwide fallback offers, `false` if local market flyer offers), titles, base prices, active discount prices, categories, and direct links to product images.
 - **📸 EDEKA / PAYBACK Loyalty Card QR Code Entity (`image`)**:
   - A dynamic 400x400 PNG QR Code entity rendering your EDEKA App / PAYBACK card barcode number for scanning directly at the checkout.
 - **📱 Dedicated EDEKA Account Device**:
@@ -55,7 +55,7 @@ It groups all sensors under a single market device and implements advanced lock-
 - **🏪 Market Status Sensor** *(disabled by default)*:
   - Reports **Open / Closed** based on real-time business hours from the market's profile.
   - Attributes include: address, ZIP code, city, phone number, GPS coordinates, opening hours for all weekdays, and available in-store services (e.g. Payback, EDEKA App Coupons).
-  - Works with all market types including **EDEKA Express**.
+  - Works with all EDEKA market formats: **EDEKA Center (E-Center)**, **EDEKA Express / Xpress**, **EDEKA City Markt**, and standard regular/franchise stores.
 
 > [!NOTE]
 > The **Market Status Sensor** is disabled by default. Enable it in **Settings › Devices & Services › EDEKA › Entities** if you want to use it.
@@ -140,6 +140,12 @@ Connecting your EDEKA account currently enables **one** additional feature:
 
 - **📸 EDEKA / PAYBACK Loyalty Card QR Code**: Displays a live, scannable QR Code entity on your Home Assistant dashboard for scanning at the store checkout.
 
+> [!WARNING]
+> **Current Limitations — Local Store Offers vs. National Fallback**
+>
+> - **Local Market Flyer Offers**: If an individual EDEKA merchant/franchise store has digitized their local weekly offers in the EDEKA Web API, all items (typically 100–300+ items) are returned and the sensor attribute `national` is set to `false`.
+> - **National Fallback (20 items)**: Some independent merchants do not publish their local store flyers into the central web API. In this case, the EDEKA API returns `national: true` with a fallback set of exactly 20 nationwide campaign offers (the sensor's `national` attribute will be `true`).
+>
 > [!WARNING]
 > **Current Limitations — eBons & Coupons**
 >
