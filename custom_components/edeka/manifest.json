@@ -11,5 +11,6 @@
   "requirements": [
     "curl_cffi>=0.15.0"
   ],
-  "version": "1.0.4-dev0"
+  "version": "1.0.4-dev0",
+  "quality_scale": "platinum"
 }
