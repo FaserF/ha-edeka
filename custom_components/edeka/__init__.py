@@ -210,9 +210,15 @@ async def async_setup_entry(
     # Remove orphaned account device when token was cleared (logout)
     if not coordinator.user_token or not coordinator.user_token.strip():
         dev_reg = dr.async_get(hass)
-        account_device = dev_reg.async_get_device(
-            identifiers={(DOMAIN, coordinator.account_key)}
-        )
+        if hasattr(dev_reg, "async_get_device_by_identifier"):
+            account_device = dev_reg.async_get_device_by_identifier(
+                (DOMAIN, coordinator.account_key),
+                entry.entry_id,
+            )
+        else:
+            account_device = dev_reg.async_get_device(
+                identifiers={(DOMAIN, coordinator.account_key)}
+            )
         if account_device:
             dev_reg.async_remove_device(account_device.id)
             _LOGGER.debug(
