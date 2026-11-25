@@ -332,10 +332,12 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             # Exponential backoff on rate-limit / blocked responses
             status = getattr(err, "status", None)
             err_str = str(err).lower()
+            has_valid_cache = bool(self.is_data_valid and self.data)
+            log_fn = _LOGGER.warning if has_valid_cache else _LOGGER.error
             if status in (403, 429) or "403" in err_str or "429" in err_str:
                 backoff_hours = min(24, self._consecutive_failures * 2)
                 self._backoff_until = dt_util.now() + timedelta(hours=backoff_hours)
-                _LOGGER.error(
+                log_fn(
                     "EDEKA market %s: rate-limited / blocked. Backing off %d h.",
                     self.market_id,
                     backoff_hours,
@@ -343,7 +345,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 backoff_minutes = min(240, self._consecutive_failures * 30)
                 self._backoff_until = dt_util.now() + timedelta(minutes=backoff_minutes)
-                _LOGGER.error(
+                log_fn(
                     "EDEKA market %s: fetch error (failure #%d). Backing off %d min. "
                     "Error: %s",
                     self.market_id,
@@ -353,7 +355,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
                 )
 
             # If we have valid cached data for the current week, fall back to it so entities stay available
-            if self.is_data_valid and self.data:
+            if has_valid_cache:
                 _LOGGER.warning(
                     "EDEKA market %s: fetch failed, but cached data for the current week is valid – continuing with cached data. Error: %s",
                     self.market_id,
@@ -388,15 +390,18 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
 
             parsed_discounts = []
             for offer in raw_offers:
-                # Convert milliseconds timestamp to ISO format string
+                # Convert milliseconds timestamp or ISO string to ISO format string
                 valid_date_str = ""
-                if offer.get("gueltig_bis"):
+                raw_valid = offer.get("gueltig_bis")
+                if isinstance(raw_valid, (int, float)):
                     with contextlib.suppress(
                         ValueError, TypeError, OverflowError, OSError
                     ):
                         valid_date_str = datetime.fromtimestamp(
-                            offer["gueltig_bis"] / 1000.0, tz=UTC
+                            raw_valid / 1000.0, tz=UTC
                         ).isoformat()
+                elif isinstance(raw_valid, str) and raw_valid.strip():
+                    valid_date_str = raw_valid.strip()
 
                 parsed_discounts.append(
                     {
@@ -485,8 +490,7 @@ class EdekaDataUpdateCoordinator(DataUpdateCoordinator):
                 "last_receipt": {},
             }
             return data, client.cookies
-        except Exception as exc:
-            _LOGGER.error("EDEKA sync fetch failed: %s", exc)
+        except Exception:
             raise
 
     @callback
