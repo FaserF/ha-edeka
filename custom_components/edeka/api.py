@@ -22,7 +22,8 @@ _MOBILE_APP_CLIENT_CRED = "wFoBG7VhAIn48kx9SDyVhaN9FttvPZi2"
 
 def _normalize_mobile_offer(raw: dict[str, Any]) -> dict[str, Any]:
     """Convert an official /v2/offers/mobile JSON object to internal offer keys."""
-    price_obj = raw.get("price") if isinstance(raw.get("price"), dict) else {}
+    raw_price = raw.get("price")
+    price_obj: dict[str, Any] = raw_price if isinstance(raw_price, dict) else {}
     raw_val = price_obj.get("rawValue")
     price_num = 0.0
     if isinstance(raw_val, (int, float)):
@@ -36,9 +37,12 @@ def _normalize_mobile_offer(raw: dict[str, Any]) -> dict[str, Any]:
     descriptions = [
         str(d).strip() for d in (raw.get("descriptions") or []) if d and str(d).strip()
     ]
-    image_obj = raw.get("image") if isinstance(raw.get("image"), dict) else {}
-    cat_obj = raw.get("category") if isinstance(raw.get("category"), dict) else {}
-    criteria = raw.get("criteria") if isinstance(raw.get("criteria"), list) else []
+    raw_image = raw.get("image")
+    image_obj: dict[str, Any] = raw_image if isinstance(raw_image, dict) else {}
+    raw_cat = raw.get("category")
+    cat_obj: dict[str, Any] = raw_cat if isinstance(raw_cat, dict) else {}
+    raw_criteria = raw.get("criteria")
+    criteria: list[Any] = raw_criteria if isinstance(raw_criteria, list) else []
     first_crit = (
         criteria[0].get("name") if criteria and isinstance(criteria[0], dict) else None
     )
