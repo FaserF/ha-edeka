@@ -94,38 +94,56 @@ async def test_coordinator_fetch_error(hass: HomeAssistant) -> None:
         await coordinator._async_update_data()
 
 
-async def test_api_html_parsing_and_cached_fallback(
+async def test_api_mobile_json_and_cached_fallback(
     hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test HTML offer parsing from /angebote/ and WARNING-only log on valid cache fallback."""
+    """Test official /v2/offers/mobile OAuth JSON client and WARNING-only fallback."""
     from datetime import UTC, datetime, timedelta
 
     from custom_components.edeka.api import EdekaAPIClient
 
-    sample_html = """
-    <article data-tracking-event="[&quot;show_promotion&quot;,{&quot;promotion_id&quot;:&quot;16187796&quot;,&quot;promotion_item_name&quot;:&quot;Speisekartoffeln&quot;,&quot;promotion_item_price&quot;:1.99,&quot;promotion_item_category&quot;:&quot;Obst &amp; Gemuese&quot;,&quot;promotion_variant&quot;:&quot;NATIONAL&quot;,&quot;promotion_item_expiration_date&quot;:&quot;2026-11-28T00:00:00Z&quot;}]">
-      <a href="#angebot-1" data-tracking-event="[&quot;select_promotion&quot;,{&quot;promotion_id&quot;:&quot;16187796&quot;,&quot;promotion_item_name&quot;:&quot;Speisekartoffeln&quot;,&quot;promotion_item_price&quot;:1.99,&quot;promotion_item_category&quot;:&quot;Obst &amp; Gemuese&quot;,&quot;promotion_variant&quot;:&quot;NATIONAL&quot;,&quot;promotion_item_expiration_date&quot;:&quot;2026-11-28T00:00:00Z&quot;}]">Speisekartoffeln</a>
-      <p class="line-clamp-2">Sorte siehe Etikett, 2,5kg</p>
-      <img src="https://offer-images.api.edeka/test.png?imwidth=360" />
-    </article>
-    <dialog id="dialog-angebot-1"><span>Grundpreis: 1kg = € 0,80</span></dialog>
-    """
-    fake_resp = MagicMock()
-    fake_resp.status_code = 200
-    fake_resp.content = sample_html.encode()
-    fake_resp.text = sample_html
-    fake_resp.headers = {"content-type": "text/html; charset=utf-8"}
-    fake_resp.cookies = {}
-    fake_resp.json.side_effect = ValueError("HTML")
+    token_resp = MagicMock()
+    token_resp.status_code = 200
+    token_resp.content = b'{"access_token":"tok123","expires_in":360}'
+    token_resp.cookies = {}
+    token_resp.json.return_value = {"access_token": "tok123", "expires_in": 360}
 
-    with patch("custom_components.edeka.api.requests.request", return_value=fake_resp):
+    offers_payload = {
+        "totalCount": 1,
+        "national": True,
+        "offers": [
+            {
+                "id": 500000785,
+                "title": "Speisekartoffeln",
+                "price": {"value": "1.99", "rawValue": 1.99, "currency": "EUR"},
+                "descriptions": ["Sorte siehe Etikett, 2,5kg"],
+                "category": {"id": 4, "name": "Obst & Gemuese"},
+                "validTill": "2026-11-28",
+                "image": {
+                    "imageUrl": "https://offer-images.api.edeka/test.png",
+                },
+                "discount": "-20%",
+            }
+        ],
+    }
+    offers_resp = MagicMock()
+    offers_resp.status_code = 200
+    offers_resp.content = b"{}"
+    offers_resp.cookies = {}
+    offers_resp.json.return_value = offers_payload
+
+    with patch(
+        "custom_components.edeka.api.requests.request",
+        side_effect=[token_resp, offers_resp],
+    ):
         parsed = EdekaAPIClient().get_offers("8001860")
 
     assert parsed["national"] is True
     assert len(parsed["docs"]) == 1
     assert parsed["docs"][0]["titel"] == "Speisekartoffeln"
-    assert parsed["docs"][0]["basicPrice"] == "1kg = € 0,80"
-    assert parsed["docs"][0]["gueltig_bis"] == "2026-11-28T00:00:00Z"
+    assert parsed["docs"][0]["preis"] == 1.99
+    assert parsed["docs"][0]["warengruppe"] == "Obst & Gemuese"
+    assert parsed["docs"][0]["gueltig_bis"] == "2026-11-28"
 
     entry = MockConfigEntry(domain=DOMAIN, data={CONF_MARKET_ID: "8001860"}, options={})
     entry.add_to_hass(hass)

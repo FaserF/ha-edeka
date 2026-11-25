@@ -1,95 +1,58 @@
-"""Pure Python client for EDEKA Web API using curl_cffi."""
+"""Pure Python client for official EDEKA JSON & Mobile B2C APIs using curl_cffi."""
 
 from __future__ import annotations
 
-import html
-import json
 import logging
-import re
-import urllib.parse
+import time
 from typing import Any, Literal
 
 from curl_cffi import requests
 
 _LOGGER = logging.getLogger(__name__)
 
-_OFFER_BLOCK_RE = re.compile(
-    r"(<article\b[^>]*>.*?</article>(?:\s*<dialog\b[^>]*>.*?</dialog>)?)",
-    re.DOTALL,
-)
-_TRACKING_EVENT_RE = re.compile(r'data-tracking-event="([^"]+)"')
-_IMG_SRC_RE = re.compile(r'<img[^>]+src="(https://offer-images\.api\.edeka/[^"]+)"')
-_DESC_RE = re.compile(r'<p class="line-clamp-2">\s*(.*?)\s*</p>', re.DOTALL)
-_BASIC_PRICE_RE = re.compile(r"Grundpreis:\s*([^<\n]+)")
-_TAG_STRIP_RE = re.compile(r"<[^>]+>")
+_TOKEN_URL = "https://b2b-login.api.edeka/auth/realms/b2b/protocol/openid-connect/token"
+_MOBILE_OFFERS_URL = "https://b2c-gw.api.edeka/v2/offers/mobile"
+_B2C_MARKETS_URL = "https://b2c-gw.api.edeka/v4/markets"
+_MARKET_SEARCH_URL = "https://www.edeka.de/api/marketsearch/markets"
+
+# Public anonymous mobile app OAuth2 client embedded in the official EDEKA Android APK
+_MOBILE_APP_CLIENT_ID = "edeka-app-android-client"
+_MOBILE_APP_CLIENT_CRED = "wFoBG7VhAIn48kx9SDyVhaN9FttvPZi2"
 
 
-def _parse_offers_html(html_text: str) -> dict[str, Any]:
-    """Parse promotional offer cards from the EDEKA /angebote/ HTML page."""
-    docs: list[dict[str, Any]] = []
-    seen_keys: set[str] = set()
-    variants: set[str] = set()
+def _normalize_mobile_offer(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert an official /v2/offers/mobile JSON object to internal offer keys."""
+    price_obj = raw.get("price") if isinstance(raw.get("price"), dict) else {}
+    raw_val = price_obj.get("rawValue")
+    price_num = 0.0
+    if isinstance(raw_val, (int, float)):
+        price_num = float(raw_val)
+    elif price_obj.get("value") is not None:
+        try:
+            price_num = float(str(price_obj["value"]).replace(",", "."))
+        except ValueError:
+            price_num = 0.0
 
-    for block in _OFFER_BLOCK_RE.findall(html_text):
-        promo: dict[str, Any] | None = None
-        for raw_attr in _TRACKING_EVENT_RE.findall(block):
-            try:
-                parsed = json.loads(html.unescape(raw_attr))
-            except ValueError, TypeError:
-                continue
-            if (
-                isinstance(parsed, list)
-                and len(parsed) >= 2
-                and parsed[0] in ("select_promotion", "show_promotion")
-                and isinstance(parsed[1], dict)
-            ):
-                promo = parsed[1]
-                break
+    descriptions = [
+        str(d).strip() for d in (raw.get("descriptions") or []) if d and str(d).strip()
+    ]
+    image_obj = raw.get("image") if isinstance(raw.get("image"), dict) else {}
+    cat_obj = raw.get("category") if isinstance(raw.get("category"), dict) else {}
+    criteria = raw.get("criteria") if isinstance(raw.get("criteria"), list) else []
+    first_crit = (
+        criteria[0].get("name") if criteria and isinstance(criteria[0], dict) else None
+    )
 
-        if not promo:
-            continue
-
-        title = str(promo.get("promotion_item_name") or "").strip()
-        promo_id = str(promo.get("promotion_id") or "")
-        dedup_key = f"{promo_id}:{title}"
-        if not title or dedup_key in seen_keys:
-            continue
-        seen_keys.add(dedup_key)
-
-        variant = str(promo.get("promotion_variant") or "")
-        if variant:
-            variants.add(variant)
-
-        desc_match = _DESC_RE.search(block)
-        description = (
-            re.sub(
-                r"\s+",
-                " ",
-                _TAG_STRIP_RE.sub(" ", html.unescape(desc_match.group(1))),
-            ).strip()
-            if desc_match
-            else ""
-        )
-        basic_match = _BASIC_PRICE_RE.search(block)
-        basic_price = html.unescape(basic_match.group(1)).strip() if basic_match else ""
-        img_match = _IMG_SRC_RE.search(block)
-        image_url = html.unescape(img_match.group(1)) if img_match else ""
-
-        docs.append(
-            {
-                "angebotid": promo_id,
-                "titel": title,
-                "preis": promo.get("promotion_item_price") or 0.0,
-                "beschreibung": description,
-                "bild_app": image_url,
-                "basicPrice": basic_price,
-                "warengruppe": promo.get("promotion_item_category") or "Angebote",
-                "gueltig_bis": promo.get("promotion_item_expiration_date") or "",
-            }
-        )
-
-    is_national = not variants or variants == {"NATIONAL"}
-    return {"docs": docs, "national": is_national}
+    return {
+        "angebotid": raw.get("id"),
+        "titel": str(raw.get("title") or "").strip(),
+        "preis": price_num,
+        "beschreibung": ", ".join(descriptions),
+        "bild_app": str(image_obj.get("imageUrl") or ""),
+        "basicPrice": str(raw.get("priceLabel") or raw.get("discount") or ""),
+        "warengruppe": str(cat_obj.get("name") or first_crit or "Angebote"),
+        "gueltig_bis": str(raw.get("validTill") or ""),
+    }
 
 
 class EdekaAPIError(Exception):
@@ -97,11 +60,20 @@ class EdekaAPIError(Exception):
 
 
 class EdekaAPIClient:
-    """API client that interacts directly with EDEKA web endpoints."""
+    """API client interacting strictly with official EDEKA JSON REST APIs."""
 
-    def __init__(self, cookies: dict[str, str] | None = None) -> None:
-        """Initialize the client with optional cookies."""
+    def __init__(
+        self,
+        cookies: dict[str, str] | None = None,
+        client_id: str = _MOBILE_APP_CLIENT_ID,
+        client_cred: str = _MOBILE_APP_CLIENT_CRED,
+    ) -> None:
+        """Initialize the client with optional cookies and OAuth client info."""
         self.cookies: dict[str, str] = cookies or {}
+        self._client_id = client_id
+        self._client_cred = client_cred
+        self._access_token: str | None = None
+        self._token_expires_at: float = 0.0
 
     def _request(
         self,
@@ -111,42 +83,48 @@ class EdekaAPIClient:
         url: str,
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        data: dict[str, str] | None = None,
     ) -> Any:
-        """Perform a secure request using curl_cffi."""
+        """Perform an HTTPS JSON request using curl_cffi."""
         req_headers = {
             "Accept": "application/json, text/plain, */*",
             "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "User-Agent": "okhttp/5.3.2",
         }
         if headers:
             req_headers.update(headers)
 
-        # Determine static hardcoded endpoint string to avoid any taint flow to logging
+        # Static endpoint string avoids taint flow into debug logs
         if "marketsearch/markets" in url:
             log_endpoint = "GET /api/marketsearch/markets"
-        elif "/angebote" in url:
-            log_endpoint = "GET /angebote/"
-        elif "service/eh/offers" in url:
-            log_endpoint = "GET /eh/service/eh/offers"
+        elif "v2/offers/mobile" in url:
+            log_endpoint = "GET /v2/offers/mobile"
+        elif "v4/markets" in url:
+            log_endpoint = "GET /v4/markets"
+        elif "openid-connect/token" in url:
+            log_endpoint = "POST /protocol/openid-connect/token"
         else:
             log_endpoint = "GET /api/unknown"
 
         log_has_params = "yes" if params else "no"
 
         _LOGGER.debug(
-            "Sending GET request: %s (has_params: %s)", log_endpoint, log_has_params
+            "Sending %s request: %s (has_params: %s)",
+            method,
+            log_endpoint,
+            log_has_params,
         )
         try:
             response = requests.request(
                 method,
                 url,
                 params=params,
+                data=data,
                 headers=req_headers,
                 cookies=self.cookies,
                 impersonate="chrome",
                 timeout=30.0,
             )
-            # Update cookies with any new ones returned in the response
             if response.cookies:
                 if hasattr(response.cookies, "get_dict"):
                     self.cookies.update(response.cookies.get_dict())
@@ -159,22 +137,40 @@ class EdekaAPIClient:
                 len(response.content) if response.content else 0,
             )
             response.raise_for_status()
-            content_type = response.headers.get("content-type", "").lower()
-            if "html" in content_type or "/angebote" in url:
-                try:
-                    return response.json()
-                except ValueError:
-                    return response.text
             return response.json()
         except Exception as exc:
             _LOGGER.warning("EDEKA API request failed for %s: %s", log_endpoint, exc)
             raise EdekaAPIError(f"EDEKA API request failed: {exc}") from exc
 
+    def _ensure_offers_token(self) -> str:
+        """Obtain and cache a short-lived anonymous mobile OAuth2 bearer token."""
+        if self._access_token and time.monotonic() < self._token_expires_at:
+            return self._access_token
+
+        payload = self._request(
+            "POST",
+            _TOKEN_URL,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "grant_type": "client_credentials",
+                "client_id": self._client_id,
+                "client_secret": self._client_cred,
+            },
+        )
+        if not isinstance(payload, dict) or not payload.get("access_token"):
+            raise EdekaAPIError("Failed to obtain EDEKA OAuth2 access token")
+
+        self._access_token = str(payload["access_token"])
+        expires_in = max(60, int(payload.get("expires_in") or 300))
+        self._token_expires_at = time.monotonic() + max(30, expires_in - 60)
+        return self._access_token
+
     def market_search(self, query: str) -> list[dict[str, Any]]:
         """Search for EDEKA markets using ZIP code, city name, or market name."""
         _LOGGER.debug("Searching for EDEKA market with query: %s", query)
-        url = "https://www.edeka.de/api/marketsearch/markets"
-        data = self._request("GET", url, params={"limit": 999, "searchstring": query})
+        data = self._request(
+            "GET", _MARKET_SEARCH_URL, params={"limit": 999, "searchstring": query}
+        )
 
         if isinstance(data, dict):
             markets = data.get("markets", [])
@@ -190,59 +186,97 @@ class EdekaAPIClient:
     def get_market_by_id(self, market_id: str) -> dict[str, Any] | None:
         """Fetch details for a specific EDEKA market by ID."""
         _LOGGER.debug("Fetching EDEKA market details for ID: %s", market_id)
-        url = "https://www.edeka.de/api/marketsearch/markets"
-        data = self._request("GET", url, params={"marketId": market_id})
+        data = self._request("GET", _MARKET_SEARCH_URL, params={"marketId": market_id})
         if isinstance(data, dict):
             markets = data.get("markets", [])
             if markets:
                 return markets[0]
         return None
 
-    def get_offers(self, market_id: str) -> dict[str, Any]:
-        """Fetch offers for the given market ID from the EDEKA web offers page."""
-        _LOGGER.debug("Fetching offers for EDEKA market_id: %s", market_id)
-        if "EDEKA_B2C" not in self.cookies:
-            cookie_payload = json.dumps(
-                {"marketID": str(market_id)}, separators=(",", ":")
-            )
-            self.cookies["EDEKA_B2C"] = urllib.parse.quote(cookie_payload)
-
-        url = "https://www.edeka.de/angebote/"
+    def _get_market_gln(self, market_id: str, token: str) -> str | None:
+        """Resolve a market's GLN via the official B2C v4/markets API."""
         data = self._request(
             "GET",
-            url,
-            headers={
-                "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
-            },
+            f"{_B2C_MARKETS_URL}/{market_id}",
+            headers={"Authorization": f"Bearer {token}"},
         )
-
         if isinstance(data, dict):
-            offers = data.get("docs", [])
-            _LOGGER.debug(
-                "Offers parsed successfully for market_id %s: %d offers (national: %s)",
-                market_id,
-                len(offers),
-                data.get("national"),
-            )
-            return data
+            core = data.get("coreData")
+            if isinstance(core, dict) and core.get("gln"):
+                return str(core["gln"])
+        return None
 
-        if isinstance(data, str):
-            parsed = _parse_offers_html(data)
-            if not parsed["docs"] and "edeka" not in data.lower():
-                raise EdekaAPIError(
-                    "Unexpected non-EDEKA HTML response from /angebote/"
+    def get_offers(self, market_id: str) -> dict[str, Any]:
+        """Fetch paginated offers from the official /v2/offers/mobile JSON API."""
+        _LOGGER.debug("Fetching offers for EDEKA market_id: %s", market_id)
+        token = self._ensure_offers_token()
+        auth_headers = {"Authorization": f"Bearer {token}"}
+
+        docs: list[dict[str, Any]] = []
+        is_national = False
+        query_key = "marketId"
+        query_val = str(market_id)
+
+        for page in range(20):
+            try:
+                data = self._request(
+                    "GET",
+                    _MOBILE_OFFERS_URL,
+                    params={
+                        query_key: query_val,
+                        "size": 200,
+                        "page": page,
+                        "sortedByCategory": "true",
+                    },
+                    headers=auth_headers,
                 )
-            _LOGGER.debug(
-                "HTML offers parsed successfully for market_id %s: %d offers (national: %s)",
-                market_id,
-                len(parsed["docs"]),
-                parsed["national"],
-            )
-            return parsed
+            except EdekaAPIError:
+                if page == 0 and query_key == "marketId":
+                    gln = self._get_market_gln(market_id, token)
+                    if gln:
+                        query_key = "marketGln"
+                        query_val = gln
+                        data = self._request(
+                            "GET",
+                            _MOBILE_OFFERS_URL,
+                            params={
+                                query_key: query_val,
+                                "size": 200,
+                                "page": 0,
+                                "sortedByCategory": "true",
+                            },
+                            headers=auth_headers,
+                        )
+                    else:
+                        raise
+                else:
+                    raise
 
-        _LOGGER.warning(
-            "Offers request for market_id %s returned unexpected payload type %s",
+            if not isinstance(data, dict):
+                break
+            if "docs" in data and isinstance(data["docs"], list):
+                return data
+            if page == 0:
+                is_national = bool(data.get("national", False))
+
+            raw_offers = data.get("offers") or []
+            if not isinstance(raw_offers, list) or not raw_offers:
+                break
+            docs.extend(
+                _normalize_mobile_offer(item)
+                for item in raw_offers
+                if isinstance(item, dict)
+            )
+            total_count = data.get("totalCount")
+            if isinstance(total_count, int) and len(docs) >= total_count:
+                break
+            if len(raw_offers) < 200:
+                break
+
+        _LOGGER.debug(
+            "Offers fetched for market_id %s: %d offers (national: %s)",
             market_id,
-            type(data).__name__,
+            len(docs),
+            is_national,
         )
-        return {}
+        return {"docs": docs, "national": is_national}
