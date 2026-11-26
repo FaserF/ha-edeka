@@ -29,6 +29,7 @@ Check out our full collection of Home Assistant supermarket integrations and the
 | Repository | Description |
 | :--- | :--- |
 | 🏷️ [**Grocery Deals (ha-grocery-deals)**](https://github.com/FaserF/ha-grocery-deals) | **Smart multi-store price comparison hub (aggregates all 5 integrations)** |
+| 🔴 [**ha-penny**](https://github.com/FaserF/ha-penny) | PENNY digital receipts (eBons) & loyalty points |
 | 🔴 [**ha-rewe**](https://github.com/FaserF/ha-rewe) | REWE weekly offers, bonus points, coupons & product filters |
 | 🔵 [**ha-lidl**](https://github.com/FaserF/ha-lidl) | Lidl Plus weekly offers, coupons & digital receipts |
 | ⚪ [**ha-aldi**](https://github.com/FaserF/ha-aldi) | ALDI Süd & ALDI Nord weekly flyers & brochures |
@@ -58,6 +59,11 @@ It groups all sensors under a single market device and implements advanced lock-
 > [!WARNING]
 > **eBons (receipts) and Coupons are currently NOT supported.**
 > EDEKA's personal data endpoints require an OAuth2 access token issued exclusively by the official EDEKA iOS/Android App (via Keycloak). The `KEYCLOAK_IDENTITY` web session cookie does **not** grant access to these endpoints. Until a compatible token exchange is discovered, those sensors will always show `0 items` / `Keine Kassenbons`.
+
+> [!NOTE]
+> **NETTO Marken-Discount & API Version Note**
+> - **NETTO Marken-Discount**: Although part of the EDEKA Group, NETTO Marken-Discount operates on separate API infrastructure outside the EDEKA B2C Web API (`b2c-gw.api.edeka`) and is out of scope for `ha-edeka`.
+> - **Offers API (`v1.0.5+`)**: Versions `v1.0.5+` use `/v2/offers/mobile` (replacing legacy `/eh/service/eh/offers`). If you see `404` on `/eh/service/eh/offers`, please ensure you are running `v1.0.5` or newer.
 
 - **🏪 Market Status Sensor** *(disabled by default)*:
   - Reports **Open / Closed** based on real-time business hours from the market's profile.

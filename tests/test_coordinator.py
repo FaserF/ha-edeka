@@ -168,3 +168,73 @@ async def test_api_mobile_json_and_cached_fallback(
 
     assert fallback == coordinator.data
     assert not any(r.levelname == "ERROR" for r in caplog.records)
+
+
+async def test_market_180895_offers_and_gln_lookup() -> None:
+    """Regression test for market 180895 (EDEKA Moeller) on /v2/offers/mobile."""
+    from custom_components.edeka.api import EdekaAPIClient
+
+    token_resp = MagicMock()
+    token_resp.status_code = 200
+    token_resp.content = b'{"access_token":"tok123","expires_in":360}'
+    token_resp.cookies = {}
+    token_resp.json.return_value = {"access_token": "tok123", "expires_in": 360}
+
+    offers_resp = MagicMock()
+    offers_resp.status_code = 200
+    offers_resp.content = b"{}"
+    offers_resp.cookies = {}
+    offers_resp.json.return_value = {
+        "totalCount": 2,
+        "national": False,
+        "offers": [
+            {
+                "id": 180895001,
+                "title": "Alpenmilch",
+                "price": {"value": "1.19", "rawValue": 1.19, "currency": "EUR"},
+                "descriptions": ["1L Packung"],
+                "category": {"id": 2, "name": "Molkerei"},
+                "validTill": "2026-11-28",
+                "image": {"imageUrl": "https://offer-images.api.edeka/milk.png"},
+                "discount": "-25%",
+            },
+            {
+                "id": 180895002,
+                "title": "Butter",
+                "price": {"value": "1.79", "rawValue": 1.79, "currency": "EUR"},
+                "descriptions": ["250g"],
+                "category": {"id": 2, "name": "Molkerei"},
+                "validTill": "2026-11-28",
+                "image": {"imageUrl": "https://offer-images.api.edeka/butter.png"},
+                "discount": "-30%",
+            },
+        ],
+    }
+
+    with patch(
+        "custom_components.edeka.api.requests.request",
+        side_effect=[token_resp, offers_resp],
+    ) as mock_req:
+        parsed = EdekaAPIClient().get_offers("180895")
+
+    assert parsed["national"] is False
+    assert len(parsed["docs"]) == 2
+    assert parsed["docs"][0]["titel"] == "Alpenmilch"
+    assert mock_req.call_args_list[1].kwargs["params"]["marketId"] == "180895"
+
+
+def test_manifest_version_is_valid_semver() -> None:
+    """Ensure manifest.json version is valid SemVer (prevents release zip drift)."""
+    import json
+    import re
+    from pathlib import Path
+
+    manifest_path = (
+        Path(__file__).resolve().parent.parent
+        / "custom_components"
+        / "edeka"
+        / "manifest.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    version = manifest["version"]
+    assert re.match(r"^\d+\.\d+\.\d+([.-].+)?$", version) is not None
